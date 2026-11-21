@@ -1,0 +1,3338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>BELLO! EAT IT RIGHT! - Food Quest</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Nunito', sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            overflow: hidden;
+            background-color: #1e293b;
+            touch-action: none;
+        }
+        h1, h2, h3, .font-cartoon {
+            font-family: 'Fredoka', sans-serif;
+        }
+        .btn-3d {
+            transition: all 0.1s ease;
+            box-shadow: 0 6px 0 rgba(0,0,0,0.25);
+        }
+        .btn-3d:active:not(:disabled) {
+            transform: translateY(4px);
+            box-shadow: 0 2px 0 rgba(0,0,0,0.25);
+        }
+        .btn-3d:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+        .animate-float {
+            animation: float 3s ease-in-out infinite;
+        }
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 15px rgba(250, 204, 21, 0.6); }
+            50% { box-shadow: 0 0 30px rgba(250, 204, 21, 1); }
+        }
+        .glow-gold {
+            animation: pulse-glow 2s infinite;
+        }
+        /* Custom Scrollbar for modals */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 8px; }
+        ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 8px; }
+        ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+        
+        .cw-cell {
+            width: 34px;
+            height: 34px;
+            text-align: center;
+            font-weight: 800;
+            text-transform: uppercase;
+            font-size: 1.1rem;
+            border-radius: 6px;
+        }
+        @media (min-width: 768px) {
+            .cw-cell { width: 42px; height: 42px; font-size: 1.25rem; }
+        }
+    </style>
+</head>
+<body class="w-screen h-screen flex flex-col items-center justify-center relative text-slate-800">
+
+    <!-- ==================== GAME CANVAS ==================== -->
+    <canvas id="gameCanvas" class="w-full h-full block"></canvas>
+
+    <!-- ==================== TOP HUD BAR ==================== -->
+    <div id="hudBar" class="hidden fixed top-0 left-0 right-0 p-2 md:p-4 flex justify-between items-center z-20 pointer-events-none">
+        <!-- Left: Stats -->
+        <div class="flex items-center gap-2 md:gap-3 pointer-events-auto bg-white/90 backdrop-blur-md px-3 py-1.5 md:px-4 md:py-2 rounded-2xl shadow-lg border-2 border-amber-400">
+            <div class="flex items-center gap-1 bg-purple-100 text-purple-900 px-2.5 py-0.5 rounded-xl font-cartoon font-bold text-xs md:text-sm max-w-[110px] truncate">
+                <span>🧑‍🎓</span>
+                <span id="hudStudentName" class="truncate">Explorer</span>
+            </div>
+            <div class="w-0.5 h-6 bg-slate-200"></div>
+            <div class="flex items-center gap-1.5">
+                <span class="text-xl md:text-2xl">🍌</span>
+                <span id="hudCoins" class="font-cartoon font-bold text-lg md:text-xl text-amber-600">0</span>
+            </div>
+            <div class="w-0.5 h-6 bg-slate-200"></div>
+            <div class="flex items-center gap-1.5">
+                <span class="text-xl md:text-2xl">⭐</span>
+                <span id="hudStars" class="font-cartoon font-bold text-lg md:text-xl text-yellow-500">0</span>
+            </div>
+            <div class="w-0.5 h-6 bg-slate-200"></div>
+            <div id="hudWorldBadge" class="font-cartoon font-bold text-sm md:text-base text-emerald-700 bg-emerald-100 px-2.5 py-0.5 rounded-xl">
+                World 1
+            </div>
+            <div id="hudTimerWrapper" class="flex items-center gap-1.5 border-l-2 border-slate-200 pl-2 md:pl-3">
+                <span class="text-lg md:text-xl">⏱️</span>
+                <span id="hudTimer" class="font-cartoon font-bold text-base md:text-lg text-sky-700 tabular-nums">00:00</span>
+            </div>
+        </div>
+
+        <!-- Center Objective Banner (Desktop) -->
+        <div class="hidden lg:flex items-center gap-2 bg-white/90 backdrop-blur-md px-4 py-2 rounded-2xl shadow-lg border-2 border-sky-400">
+            <span class="text-lg">🎯</span>
+            <span id="hudObjectiveText" class="font-bold text-sm text-slate-700">Reach the checkpoints!</span>
+        </div>
+
+        <!-- Right: Quick Buttons -->
+        <div class="flex items-center gap-2 pointer-events-auto">
+            <button onclick="openModal('vocabModal')" class="btn-3d bg-sky-500 hover:bg-sky-400 text-white font-cartoon font-bold px-3 py-1.5 md:px-4 md:py-2 rounded-2xl text-sm md:text-base border-2 border-sky-700">
+                📖 Word Book (<span id="hudVocabCount">0</span>)
+            </button>
+            <button onclick="returnToMap()" class="btn-3d bg-amber-400 hover:bg-amber-300 text-amber-950 font-cartoon font-bold px-3 py-1.5 md:px-4 md:py-2 rounded-2xl text-sm md:text-base border-2 border-amber-600">
+                🗺️ Map
+            </button>
+            <button onclick="togglePause()" class="btn-3d bg-rose-500 hover:bg-rose-400 text-white font-cartoon font-bold px-3 py-1.5 md:px-4 md:py-2 rounded-2xl text-sm md:text-base border-2 border-rose-700">
+                ⏸️
+            </button>
+        </div>
+    </div>
+
+    <!-- ==================== ON-SCREEN TOUCH CONTROLS ==================== -->
+    <div id="touchControls" class="hidden fixed bottom-4 left-4 right-4 flex justify-between items-end z-20 pointer-events-none">
+        <!-- D-Pad Left / Right / Down -->
+        <div class="flex gap-2 pointer-events-auto">
+            <button id="btnLeft" class="w-14 h-14 md:w-16 md:h-16 bg-white/85 active:bg-amber-300 rounded-2xl shadow-xl border-4 border-slate-700 flex items-center justify-center text-2xl font-black">◀</button>
+            <button id="btnDown" class="w-14 h-14 md:w-16 md:h-16 bg-white/85 active:bg-amber-300 rounded-2xl shadow-xl border-4 border-slate-700 flex items-center justify-center text-2xl font-black">▼</button>
+            <button id="btnRight" class="w-14 h-14 md:w-16 md:h-16 bg-white/85 active:bg-amber-300 rounded-2xl shadow-xl border-4 border-slate-700 flex items-center justify-center text-2xl font-black">▶</button>
+        </div>
+        <!-- Action & Jump / Swim Up -->
+        <div class="flex gap-3 pointer-events-auto">
+            <button id="btnInteract" class="hidden px-4 h-14 md:h-16 bg-amber-400 active:bg-amber-300 rounded-2xl shadow-xl border-4 border-amber-700 flex items-center justify-center font-cartoon font-bold text-lg text-amber-950 animate-bounce">
+                ✨ OPEN
+            </button>
+            <button id="btnUp" class="w-16 h-16 md:w-20 md:h-20 bg-emerald-400 active:bg-emerald-300 rounded-full shadow-xl border-4 border-emerald-800 flex items-center justify-center font-cartoon font-black text-white text-lg">
+                JUMP
+            </button>
+        </div>
+    </div>
+
+    <!-- ==================== SCREEN 1: ANIMATED MAIN MENU ==================== -->
+    <div id="mainMenuScreen" class="fixed inset-0 bg-gradient-to-b from-sky-400 via-emerald-300 to-amber-200 flex flex-col items-center justify-center p-4 z-30 overflow-y-auto">
+        <div class="max-w-3xl w-full bg-white/95 backdrop-blur-md rounded-3xl p-6 md:p-8 shadow-2xl border-4 border-amber-400 text-center relative">
+            <div class="inline-block bg-amber-400 text-amber-950 font-cartoon font-bold px-4 py-1 rounded-full text-sm md:text-base mb-2 shadow">
+                🌟 YEAR 4 ENGLISH ADVENTURE 🌟
+            </div>
+            <h1 class="font-cartoon font-black text-4xl sm:text-5xl md:text-6xl text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 via-teal-500 to-sky-600 drop-shadow-sm mb-1">
+                BELLO! EAT IT RIGHT!
+            </h1>
+            <h2 class="font-cartoon font-bold text-lg md:text-2xl text-amber-600 mb-4">
+                The Lost Treasures of Healthy Kingdom
+            </h2>
+
+            <!-- Story Card -->
+            <div class="bg-amber-50 border-2 border-amber-200 rounded-2xl p-4 mb-5 text-slate-700 text-sm md:text-base leading-relaxed font-semibold">
+                "The Healthy Kingdom has lost its three magical treasures! Without them, the kingdom cannot prepare healthy meals or share its food knowledge. Our little helpers need <strong>YOU</strong>! Travel through the jungle, explore the ocean and discover the secret factory. Complete every mission, collect the treasures and save the kingdom!"
+            </div>
+
+            <!-- Student Name Input -->
+            <div class="max-w-md mx-auto mb-5 bg-sky-50 border-2 border-sky-300 rounded-2xl p-3 flex flex-col sm:flex-row items-center gap-2">
+                <label for="menuStudentName" class="font-cartoon font-bold text-sky-900 text-sm md:text-base whitespace-nowrap">🧑‍🎓 Student Name:</label>
+                <input type="text" id="menuStudentName" maxlength="24" placeholder="Enter your name..." oninput="syncStudentName(this.value)" class="w-full px-3 py-1.5 rounded-xl border-2 border-sky-300 focus:border-emerald-500 outline-none font-bold text-slate-800 bg-white text-center sm:text-left">
+            </div>
+
+            <!-- Main Action Buttons -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4 max-w-xl mx-auto mb-5">
+                <button onclick="startStoryIntro()" class="btn-3d bg-emerald-500 hover:bg-emerald-400 text-white font-cartoon font-bold text-xl md:text-2xl py-3.5 px-6 rounded-2xl border-4 border-emerald-700 flex items-center justify-center gap-2">
+                    <span>▶</span> PLAY GAME
+                </button>
+                <button onclick="openCustomiser()" class="btn-3d bg-amber-400 hover:bg-amber-300 text-amber-950 font-cartoon font-bold text-xl md:text-2xl py-3.5 px-6 rounded-2xl border-4 border-amber-600 flex items-center justify-center gap-2">
+                    <span>🎨</span> CUSTOMISE
+                </button>
+            </div>
+
+            <!-- Secondary Menu Controls -->
+            <div class="flex flex-wrap justify-center gap-2 md:gap-3">
+                <button onclick="openModal('howToPlayModal')" class="btn-3d bg-sky-500 hover:bg-sky-400 text-white font-cartoon font-bold px-4 py-2 rounded-xl border-2 border-sky-700 text-sm md:text-base">
+                    ❓ HOW TO PLAY
+                </button>
+                <button onclick="openModal('settingsModal')" class="btn-3d bg-purple-500 hover:bg-purple-400 text-white font-cartoon font-bold px-4 py-2 rounded-xl border-2 border-purple-700 text-sm md:text-base">
+                    ⚙️ SETTINGS
+                </button>
+                <button id="menuSoundBtn" onclick="toggleSound()" class="btn-3d bg-slate-700 hover:bg-slate-600 text-white font-cartoon font-bold px-4 py-2 rounded-xl border-2 border-slate-900 text-sm md:text-base">
+                    🔊 SFX: ON
+                </button>
+                <button id="menuMusicBtn" onclick="toggleMusic()" class="btn-3d bg-slate-700 hover:bg-slate-600 text-white font-cartoon font-bold px-4 py-2 rounded-xl border-2 border-slate-900 text-sm md:text-base">
+                    🎵 Music: ON
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== SCREEN 2: CHARACTER CUSTOMISER ==================== -->
+    <div id="customiserScreen" class="hidden fixed inset-0 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center p-3 md:p-6 z-30 overflow-y-auto">
+        <div class="max-w-4xl w-full bg-white rounded-3xl p-5 md:p-8 shadow-2xl border-4 border-yellow-300 flex flex-col md:flex-row gap-6">
+            <!-- Left: Live Preview & Presets -->
+            <div class="w-full md:w-5/12 flex flex-col items-center bg-sky-50 rounded-2xl p-4 border-2 border-sky-200">
+                <h3 class="font-cartoon font-bold text-xl text-sky-900 mb-2">Your Helper Hero</h3>
+                <div class="w-full mb-2">
+                    <input type="text" id="custStudentName" maxlength="24" placeholder="Student Name..." oninput="syncStudentName(this.value)" class="w-full px-3 py-1.5 rounded-xl border-2 border-sky-300 focus:border-purple-500 outline-none font-bold text-sm text-center bg-white text-slate-800">
+                </div>
+                <canvas id="previewCanvas" width="200" height="220" class="bg-white rounded-2xl shadow-inner border-2 border-sky-100 mb-3"></canvas>
+                <div id="presetNameBadge" class="font-cartoon font-bold text-lg text-purple-700 mb-1">Chef Bello</div>
+                <p id="presetDesc" class="text-xs text-center text-slate-600 mb-3">Cheerful, energetic, and loves crunchy carrots!</p>
+                
+                <div class="w-full">
+                    <div class="text-xs font-bold text-slate-500 uppercase mb-1.5 text-center">Choose a Preset</div>
+                    <div id="presetButtons" class="grid grid-cols-3 gap-1.5"></div>
+                </div>
+            </div>
+
+            <!-- Right: Customisation Controls -->
+            <div class="w-full md:w-7/12 flex flex-col justify-between">
+                <div>
+                    <h2 class="font-cartoon font-bold text-2xl md:text-3xl text-slate-800 mb-4">Customise Appearance</h2>
+                    <div class="grid grid-cols-2 gap-3 text-sm">
+                        <div>
+                            <label class="font-bold text-slate-600 block mb-1">Body Shape</label>
+                            <select id="custBody" onchange="updateCustomChar()" class="w-full p-2 rounded-xl border-2 border-slate-300 font-bold bg-slate-50">
+                                <option value="round">Round & Bubbly</option>
+                                <option value="tall">Tall & Bean</option>
+                                <option value="short">Short & Cute</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="font-bold text-slate-600 block mb-1">Eye Style</label>
+                            <select id="custEyes" onchange="updateCustomChar()" class="w-full p-2 rounded-xl border-2 border-slate-300 font-bold bg-slate-50">
+                                <option value="two">Two Big Eyes</option>
+                                <option value="one">One Giant Eye</option>
+                                <option value="happy">Happy Curved Eyes</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="font-bold text-slate-600 block mb-1">Hairstyle</label>
+                            <select id="custHair" onchange="updateCustomChar()" class="w-full p-2 rounded-xl border-2 border-slate-300 font-bold bg-slate-50">
+                                <option value="sprout">Sprout Leaf</option>
+                                <option value="spiky">Spiky Tuft</option>
+                                <option value="curly">Curly Puff</option>
+                                <option value="bald">Smooth & Shiny</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="font-bold text-slate-600 block mb-1">Glasses</label>
+                            <select id="custGlasses" onchange="updateCustomChar()" class="w-full p-2 rounded-xl border-2 border-slate-300 font-bold bg-slate-50">
+                                <option value="goggles">Explorer Goggles</option>
+                                <option value="round">Smart Round Glasses</option>
+                                <option value="star">Star Shades</option>
+                                <option value="none">No Glasses</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="font-bold text-slate-600 block mb-1">Outfit Colour</label>
+                            <select id="custOutfitColor" onchange="updateCustomChar()" class="w-full p-2 rounded-xl border-2 border-slate-300 font-bold bg-slate-50">
+                                <option value="#2563eb">Royal Blue</option>
+                                <option value="#16a34a">Jungle Green</option>
+                                <option value="#dc2626">Berry Red</option>
+                                <option value="#9333ea">Grape Purple</option>
+                                <option value="#ea580c">Carrot Orange</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="font-bold text-slate-600 block mb-1">Outfit Style</label>
+                            <select id="custOutfit" onchange="updateCustomChar()" class="w-full p-2 rounded-xl border-2 border-slate-300 font-bold bg-slate-50">
+                                <option value="overalls">Classic Overalls</option>
+                                <option value="chef">Chef Apron</option>
+                                <option value="diver">Ocean Suit</option>
+                                <option value="cape">Super Hero Cape</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="font-bold text-slate-600 block mb-1">Hat / Headgear</label>
+                            <select id="custHat" onchange="updateCustomChar()" class="w-full p-2 rounded-xl border-2 border-slate-300 font-bold bg-slate-50">
+                                <option value="none">None</option>
+                                <option value="chef">Chef Hat</option>
+                                <option value="safari">Jungle Explorer Hat</option>
+                                <option value="crown">Fruit Crown</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="font-bold text-slate-600 block mb-1">Expression</label>
+                            <select id="custMouth" onchange="updateCustomChar()" class="w-full p-2 rounded-xl border-2 border-slate-300 font-bold bg-slate-50">
+                                <option value="smile">Big Grin</option>
+                                <option value="cheery">Open Laugh</option>
+                                <option value="o">Surprised 'O'</option>
+                                <option value="tongue">Silly Tongue</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex gap-3 mt-6">
+                    <button onclick="closeCustomiser()" class="btn-3d w-1/3 bg-slate-200 hover:bg-slate-300 text-slate-800 font-cartoon font-bold py-3 rounded-2xl border-2 border-slate-400">
+                        BACK
+                    </button>
+                    <button onclick="startStoryIntro()" class="btn-3d w-2/3 bg-emerald-500 hover:bg-emerald-400 text-white font-cartoon font-bold text-xl py-3 rounded-2xl border-4 border-emerald-700">
+                        START ADVENTURE! 🚀
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== SCREEN 3: ANIMATED STORY INTRO ==================== -->
+    <div id="storyIntroScreen" class="hidden fixed inset-0 bg-slate-900/95 flex items-center justify-center p-4 z-30">
+        <div class="max-w-2xl w-full bg-white rounded-3xl p-6 md:p-8 text-center border-4 border-amber-400 shadow-2xl">
+            <div id="storySlideIcon" class="text-7xl mb-4 animate-float">🏰</div>
+            <h2 id="storySlideTitle" class="font-cartoon font-bold text-2xl md:text-3xl text-emerald-700 mb-3">Welcome to Healthy Kingdom!</h2>
+            <p id="storySlideText" class="text-slate-700 text-lg font-semibold mb-6 leading-relaxed">
+                Once upon a time, the Healthy Kingdom was full of delicious fruits, crunchy vegetables, and happy helpers!
+            </p>
+            <div class="flex justify-center gap-2 mb-6">
+                <span id="dot0" class="w-3 h-3 rounded-full bg-emerald-500"></span>
+                <span id="dot1" class="w-3 h-3 rounded-full bg-slate-300"></span>
+                <span id="dot2" class="w-3 h-3 rounded-full bg-slate-300"></span>
+            </div>
+            <div class="flex justify-between gap-4">
+                <button onclick="openWorldMap()" class="text-slate-400 hover:text-slate-600 font-bold px-4 py-2">Skip Intro</button>
+                <button onclick="nextStorySlide()" id="storyNextBtn" class="btn-3d bg-amber-400 hover:bg-amber-300 text-amber-950 font-cartoon font-bold text-lg px-8 py-3 rounded-2xl border-4 border-amber-600">
+                    NEXT ➔
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== SCREEN 4: WORLD PROGRESS MAP ==================== -->
+    <div id="worldMapScreen" class="hidden fixed inset-0 bg-gradient-to-b from-sky-300 via-teal-200 to-emerald-300 flex flex-col items-center justify-center p-4 z-30 overflow-y-auto">
+        <div class="max-w-5xl w-full bg-white/95 backdrop-blur-md rounded-3xl p-6 md:p-8 shadow-2xl border-4 border-emerald-500">
+            <div class="flex flex-wrap justify-between items-center mb-6 gap-2">
+                <div>
+                    <h2 class="font-cartoon font-bold text-2xl md:text-4xl text-emerald-800">🗺️ Healthy Kingdom Map</h2>
+                    <p class="text-slate-600 font-bold text-sm md:text-base">Explorer: <span id="mapStudentName" class="text-purple-700 font-extrabold">Food Explorer</span> — Select a world to rescue its Magical Treasure!</p>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    <div class="bg-sky-50 text-sky-900 font-cartoon font-bold px-3.5 py-2 rounded-xl border-2 border-sky-300 text-sm flex items-center gap-1.5">
+                        <span>⏱️ Time:</span>
+                        <span id="mapElapsedTimer" class="tabular-nums">00:00</span>
+                    </div>
+                    <button onclick="openModal('vocabModal')" class="btn-3d bg-sky-500 text-white font-cartoon font-bold px-4 py-2 rounded-xl border-2 border-sky-700">
+                        📖 Word Book
+                    </button>
+                    <button onclick="goToMainMenu()" class="btn-3d bg-slate-200 text-slate-800 font-cartoon font-bold px-4 py-2 rounded-xl border-2 border-slate-400">
+                        🏠 Menu
+                    </button>
+                </div>
+            </div>
+
+            <!-- 3 Worlds Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6">
+                <!-- World 1 -->
+                <div class="bg-emerald-50 border-4 border-emerald-500 rounded-3xl p-5 flex flex-col justify-between relative shadow-md">
+                    <div id="badgeW1" class="hidden absolute -top-3 -right-3 bg-yellow-400 text-yellow-950 font-cartoon font-bold px-3 py-1 rounded-full border-2 border-yellow-600 shadow">
+                        🏆 COMPLETED
+                    </div>
+                    <div>
+                        <div class="text-5xl mb-2">🌴</div>
+                        <span class="bg-emerald-200 text-emerald-900 text-xs font-extrabold px-2.5 py-1 rounded-full">SKILL: READING</span>
+                        <h3 class="font-cartoon font-bold text-xl text-emerald-900 mt-2">World 1: The Great Jungle Run</h3>
+                        <p class="text-sm text-slate-600 mt-1">Run, jump over logs, and solve 5 reading checkpoints to unlock the Ancient Gate!</p>
+                    </div>
+                    <div class="mt-4">
+                        <div class="text-xs font-bold text-emerald-700 mb-2" id="w1ProgressText">Checkpoints: 0 / 5</div>
+                        <button onclick="enterWorld(1)" class="btn-3d w-full bg-emerald-500 hover:bg-emerald-400 text-white font-cartoon font-bold py-3 rounded-2xl border-4 border-emerald-700">
+                            PLAY WORLD 1 ▶
+                        </button>
+                    </div>
+                </div>
+
+                <!-- World 2 -->
+                <div id="cardW2" class="bg-sky-50 border-4 border-sky-500 rounded-3xl p-5 flex flex-col justify-between relative shadow-md">
+                    <div id="badgeW2" class="hidden absolute -top-3 -right-3 bg-yellow-400 text-yellow-950 font-cartoon font-bold px-3 py-1 rounded-full border-2 border-yellow-600 shadow">
+                        🏆 COMPLETED
+                    </div>
+                    <div>
+                        <div class="text-5xl mb-2">🐠</div>
+                        <span class="bg-sky-200 text-sky-900 text-xs font-extrabold px-2.5 py-1 rounded-full">SKILL: LISTENING</span>
+                        <h3 class="font-cartoon font-bold text-xl text-sky-900 mt-2">World 2: Lost Sounds of the Ocean</h3>
+                        <p class="text-sm text-slate-600 mt-1">Swim to 5 hidden shells in the ocean to hear the audio clues and solve the Ocean Crossword!</p>
+                    </div>
+                    <div class="mt-4">
+                        <div class="text-xs font-bold text-sky-700 mb-2" id="w2ProgressText">Locked (Complete World 1)</div>
+                        <button id="btnEnterW2" onclick="enterWorld(2)" disabled class="btn-3d w-full bg-sky-500 hover:bg-sky-400 text-white font-cartoon font-bold py-3 rounded-2xl border-4 border-sky-700">
+                            🔒 LOCKED
+                        </button>
+                    </div>
+                </div>
+
+                <!-- World 3 -->
+                <div id="cardW3" class="bg-amber-50 border-4 border-amber-500 rounded-3xl p-5 flex flex-col justify-between relative shadow-md">
+                    <div id="badgeW3" class="hidden absolute -top-3 -right-3 bg-yellow-400 text-yellow-950 font-cartoon font-bold px-3 py-1 rounded-full border-2 border-yellow-600 shadow">
+                        🏆 COMPLETED
+                    </div>
+                    <div>
+                        <div class="text-5xl mb-2">🏭</div>
+                        <span class="bg-amber-200 text-amber-900 text-xs font-extrabold px-2.5 py-1 rounded-full">SKILL: WRITING</span>
+                        <h3 class="font-cartoon font-bold text-xl text-amber-900 mt-2">World 3: Secret Message Factory</h3>
+                        <p class="text-sm text-slate-600 mt-1">Decode character dialogues and build your own sentences at the Word Machine!</p>
+                    </div>
+                    <div class="mt-4">
+                        <div class="text-xs font-bold text-amber-700 mb-2" id="w3ProgressText">Locked (Complete World 2)</div>
+                        <button id="btnEnterW3" onclick="enterWorld(3)" disabled class="btn-3d w-full bg-amber-500 hover:bg-amber-400 text-white font-cartoon font-bold py-3 rounded-2xl border-4 border-amber-700">
+                            🔒 LOCKED
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Treasures & Victory Banner -->
+            <div class="bg-slate-100 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4 border-2 border-slate-200">
+                <div class="flex items-center gap-4">
+                    <span class="font-cartoon font-bold text-slate-700">Magical Treasures:</span>
+                    <div id="treasureSlot1" class="w-12 h-12 rounded-xl bg-slate-200 flex items-center justify-center text-2xl opacity-40" title="Golden Apple of Knowledge">🍎</div>
+                    <div id="treasureSlot2" class="w-12 h-12 rounded-xl bg-slate-200 flex items-center justify-center text-2xl opacity-40" title="Crystal Conch of Harmony">🐚</div>
+                    <div id="treasureSlot3" class="w-12 h-12 rounded-xl bg-slate-200 flex items-center justify-center text-2xl opacity-40" title="Crown of Healthy Cooking">👑</div>
+                </div>
+                <button id="finalCelebrationBtn" onclick="showFinalCelebration()" class="hidden btn-3d glow-gold bg-gradient-to-r from-yellow-400 to-amber-500 text-amber-950 font-cartoon font-bold px-6 py-3 rounded-2xl border-4 border-amber-700">
+                    🎉 VIEW GRAND CELEBRATION!
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== MODAL: WORLD 1 READING CHECKPOINT ==================== -->
+    <div id="readingModal" class="hidden fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 z-40">
+        <div class="max-w-2xl w-full bg-white rounded-3xl p-6 md:p-8 border-4 border-emerald-500 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-3">
+                <span id="readBadge" class="bg-emerald-100 text-emerald-800 font-cartoon font-bold px-3 py-1 rounded-full text-sm">Checkpoint 1 of 5</span>
+                <span id="readTypeBadge" class="bg-amber-100 text-amber-800 font-bold px-3 py-1 rounded-full text-xs">Specific Information</span>
+            </div>
+            <h3 id="readTitle" class="font-cartoon font-bold text-2xl text-slate-800 mb-3">The School Picnic</h3>
+            
+            <!-- Reading Passage -->
+            <div class="bg-amber-50 border-2 border-amber-200 rounded-2xl p-4 mb-4 text-slate-800 text-base md:text-lg leading-relaxed font-semibold">
+                <p id="readPassage"></p>
+            </div>
+
+            <!-- Audio Narration Helper -->
+            <div class="flex flex-wrap items-center gap-2 mb-4">
+                <button onclick="readPassageAloud()" class="bg-sky-500 hover:bg-sky-400 text-white font-bold px-3 py-1.5 rounded-xl text-sm flex items-center gap-1.5">
+                    <span>🔊</span> Play Story
+                </button>
+                <button onclick="togglePauseResumeSpeech('readSpeechStatus')" class="bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold px-2.5 py-1.5 rounded-xl text-sm">
+                    ⏯️ Pause/Resume
+                </button>
+                <button onclick="stopSpeech('readSpeechStatus')" class="bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold px-2.5 py-1.5 rounded-xl text-sm">
+                    ⏹️ Stop
+                </button>
+                <span id="readSpeechStatus" class="text-xs font-bold text-slate-600"></span>
+            </div>
+
+            <!-- Question & Input -->
+            <div class="mb-4">
+                <label id="readQuestion" class="block font-cartoon font-bold text-lg text-emerald-900 mb-2"></label>
+                <input type="text" id="readAnswerInput" placeholder="Type your answer here..." class="w-full p-3.5 rounded-2xl border-4 border-slate-300 focus:border-emerald-500 outline-none font-bold text-lg" onkeydown="if(event.key==='Enter') submitReadingAnswer()">
+            </div>
+
+            <!-- Feedback Box -->
+            <div id="readFeedback" class="hidden p-4 rounded-2xl mb-4 font-bold text-base"></div>
+
+            <div class="flex justify-between gap-3">
+                <button onclick="closeModal('readingModal')" class="btn-3d bg-slate-200 text-slate-700 font-cartoon font-bold px-5 py-3 rounded-2xl border-2 border-slate-400">
+                    Close
+                </button>
+                <button onclick="submitReadingAnswer()" id="readSubmitBtn" class="btn-3d bg-emerald-500 hover:bg-emerald-400 text-white font-cartoon font-bold text-lg px-8 py-3 rounded-2xl border-4 border-emerald-700">
+                    CHECK ANSWER ✔
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== MODAL: WORLD 2 LISTENING SHELL ==================== -->
+    <div id="listeningModal" class="hidden fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 z-40">
+        <div class="max-w-xl w-full bg-white rounded-3xl p-6 md:p-8 border-4 border-sky-500 shadow-2xl text-center max-h-[92vh] overflow-y-auto">
+            <div class="text-5xl mb-1">🐚</div>
+            <h3 id="shellTitle" class="font-cartoon font-bold text-2xl text-sky-900 mb-1">Clue Shell #1</h3>
+            <p id="shellSubtitle" class="text-sm text-slate-500 font-bold mb-3">Listen to this shell's crossword clue!</p>
+
+            <!-- Audio Controls -->
+            <div class="bg-sky-50 border-2 border-sky-200 rounded-2xl p-4 mb-4">
+                <div class="flex flex-wrap justify-center gap-2 mb-2">
+                    <button onclick="playShellAudio(false)" class="btn-3d bg-sky-500 hover:bg-sky-400 text-white font-cartoon font-bold px-4 py-2 rounded-xl border-2 border-sky-700 flex items-center gap-1.5 text-sm">
+                        <span>🔊</span> PLAY CLUE
+                    </button>
+                    <button onclick="playShellAudio(true)" class="btn-3d bg-amber-400 hover:bg-amber-300 text-amber-950 font-cartoon font-bold px-3.5 py-2 rounded-xl border-2 border-amber-600 text-sm">
+                        🔁 REPLAY
+                    </button>
+                    <button onclick="togglePauseResumeSpeech('shellAudioStatus')" id="shellPauseBtn" class="btn-3d bg-indigo-500 hover:bg-indigo-400 text-white font-cartoon font-bold px-3.5 py-2 rounded-xl border-2 border-indigo-700 text-sm">
+                        ⏸️ PAUSE
+                    </button>
+                    <button onclick="stopSpeech('shellAudioStatus')" class="btn-3d bg-rose-500 hover:bg-rose-400 text-white font-cartoon font-bold px-3.5 py-2 rounded-xl border-2 border-rose-700 text-sm">
+                        ⏹️ STOP
+                    </button>
+                    <button onclick="toggleTranscript()" class="bg-white hover:bg-slate-100 text-slate-700 font-bold px-3 py-2 rounded-xl border-2 border-slate-300 text-sm">
+                        📝 Show Transcript
+                    </button>
+                </div>
+                <div id="shellAudioStatus" class="text-xs font-extrabold text-sky-800 mt-1">Ready — Press PLAY CLUE to listen</div>
+                <div id="shellTranscript" class="hidden mt-3 p-3 bg-white rounded-xl border border-sky-200 text-slate-700 font-bold text-sm italic"></div>
+            </div>
+
+            <div class="bg-teal-50 border-2 border-teal-200 rounded-2xl p-3 mb-4 text-sm font-bold text-teal-900">
+                ✅ Clue Unlocked! You can open the Ocean Crossword right now or swim to find more shells!
+            </div>
+
+            <div class="flex flex-wrap justify-between gap-3">
+                <button onclick="stopSpeech(); closeModal('listeningModal')" class="btn-3d bg-slate-200 text-slate-700 font-cartoon font-bold px-5 py-2.5 rounded-2xl border-2 border-slate-400">
+                    Swim Back 🐠
+                </button>
+                <button onclick="stopSpeech(); closeModal('listeningModal'); openCrosswordModal()" class="btn-3d bg-teal-500 hover:bg-teal-400 text-white font-cartoon font-bold text-base px-6 py-2.5 rounded-2xl border-4 border-teal-700">
+                    🧩 OPEN CROSSWORD
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== MODAL: WORLD 2 UNDERWATER CROSSWORD ==================== -->
+    <div id="crosswordModal" class="hidden fixed inset-0 bg-slate-900/85 backdrop-blur-sm flex items-center justify-center p-2 md:p-4 z-40">
+        <div class="max-w-4xl w-full bg-white rounded-3xl p-4 md:p-6 border-4 border-teal-500 shadow-2xl max-h-[92vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-3">
+                <div>
+                    <h3 class="font-cartoon font-bold text-2xl text-teal-900">🧩 The Underwater Audio Crossword</h3>
+                    <p class="text-xs md:text-sm text-slate-600 font-bold">Click a clue to listen, then type the letters into the grid!</p>
+                </div>
+                <button onclick="stopSpeech(); closeModal('crosswordModal')" class="bg-slate-200 hover:bg-slate-300 px-3 py-1.5 rounded-xl font-bold">✖</button>
+            </div>
+
+            <div class="flex flex-col lg:flex-row gap-6 items-center lg:items-start">
+                <!-- Crossword Grid -->
+                <div class="bg-teal-900 p-3 rounded-2xl shadow-inner flex flex-col items-center">
+                    <div id="crosswordGrid" class="grid gap-1"></div>
+                    <div class="flex gap-2 mt-3">
+                        <button onclick="giveCrosswordHint()" class="btn-3d bg-amber-400 text-amber-950 font-cartoon font-bold px-4 py-2 rounded-xl text-sm border-2 border-amber-600">
+                            💡 Hint Letter
+                        </button>
+                        <button onclick="checkCrossword()" class="btn-3d bg-emerald-500 text-white font-cartoon font-bold px-5 py-2 rounded-xl text-sm border-2 border-emerald-700">
+                            ✔ Check Puzzle
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Audio Clues List -->
+                <div class="w-full lg:w-1/2 space-y-2.5">
+                    <div class="flex flex-wrap items-center justify-between gap-2 bg-sky-50 p-2.5 rounded-xl border border-sky-200">
+                        <span id="cwAudioStatus" class="text-xs font-bold text-sky-800">Click any 🔊 button to hear a clue!</span>
+                        <div class="flex gap-1.5">
+                            <button onclick="togglePauseResumeSpeech('cwAudioStatus')" class="text-xs bg-amber-100 px-2 py-1 rounded-lg border border-amber-300 font-bold">⏯️</button>
+                            <button onclick="stopSpeech('cwAudioStatus')" class="text-xs bg-rose-100 px-2 py-1 rounded-lg border border-rose-300 font-bold">⏹️</button>
+                            <button onclick="toggleCwTranscripts()" class="text-xs bg-white px-2.5 py-1 rounded-lg border border-slate-300 font-bold">📝 Toggle Text</button>
+                        </div>
+                    </div>
+                    <div id="cwCluesList" class="space-y-2 max-h-72 overflow-y-auto pr-1"></div>
+                    <div id="cwFeedback" class="hidden p-3 rounded-xl font-bold text-sm"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== MODAL: WORLD 3 DIALOGUE DECODER ==================== -->
+    <div id="dialogueModal" class="hidden fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 z-40">
+        <div class="max-w-2xl w-full bg-white rounded-3xl p-6 md:p-8 border-4 border-amber-500 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-2">
+                <span id="diagBadge" class="bg-amber-100 text-amber-900 font-cartoon font-bold px-3 py-1 rounded-full text-sm">Station 1 of 3</span>
+                <div class="flex items-center gap-1.5">
+                    <button onclick="playDialogueAudio()" class="bg-sky-500 hover:bg-sky-400 text-white font-bold px-3 py-1 rounded-xl text-sm">🔊 Play</button>
+                    <button onclick="togglePauseResumeSpeech('diagSpeechStatus')" class="bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold px-2.5 py-1 rounded-xl text-sm">⏯️</button>
+                    <button onclick="stopSpeech('diagSpeechStatus')" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold px-2.5 py-1 rounded-xl text-sm">⏹️</button>
+                </div>
+            </div>
+            <div id="diagSpeechStatus" class="text-xs font-bold text-sky-700 mb-1"></div>
+            <h3 id="diagTitle" class="font-cartoon font-bold text-2xl text-slate-800 mb-3">At the Food Market</h3>
+
+            <!-- Dialogue Box -->
+            <div id="diagBox" class="bg-slate-50 border-2 border-slate-200 rounded-2xl p-4 mb-4 space-y-2 text-base md:text-lg font-semibold"></div>
+
+            <!-- Interactive Word Meaning Matching -->
+            <div class="mb-4">
+                <p class="font-cartoon font-bold text-amber-900 mb-2">Match the underlined words to their meanings:</p>
+                <div id="diagQuestions" class="space-y-2.5"></div>
+            </div>
+
+            <div id="diagFeedback" class="hidden p-3 rounded-2xl mb-4 font-bold text-sm"></div>
+
+            <div class="flex justify-between gap-3">
+                <button onclick="stopSpeech(); closeModal('dialogueModal')" class="btn-3d bg-slate-200 text-slate-700 font-cartoon font-bold px-5 py-2.5 rounded-2xl border-2 border-slate-400">
+                    Close
+                </button>
+                <button onclick="checkDialogueAnswers()" class="btn-3d bg-amber-500 hover:bg-amber-400 text-white font-cartoon font-bold text-lg px-8 py-2.5 rounded-2xl border-4 border-amber-700">
+                    DECODE MESSAGE ✔
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== MODAL: WORLD 3 SENTENCE CREATOR ==================== -->
+    <div id="sentenceModal" class="hidden fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 z-40">
+        <div class="max-w-2xl w-full bg-white rounded-3xl p-6 md:p-8 border-4 border-purple-500 shadow-2xl">
+            <div class="flex justify-between items-center mb-2">
+                <span class="bg-purple-100 text-purple-900 font-cartoon font-bold px-3 py-1 rounded-full text-sm">The Sentence Machine</span>
+                <span id="sentProgress" class="font-bold text-sm text-purple-700">Sentences Built: 0 / 5</span>
+            </div>
+            <h3 class="font-cartoon font-bold text-2xl text-slate-800 mb-2">Write an Original Sentence!</h3>
+            <p class="text-sm text-slate-600 font-semibold mb-4">Use the underlined target word below in a complete sentence about food or healthy eating.</p>
+
+            <!-- Target Word Display -->
+            <div class="bg-purple-50 border-2 border-purple-200 rounded-2xl p-4 text-center mb-4">
+                <div class="text-xs font-bold text-purple-500 uppercase">Target Word</div>
+                <div id="targetWordDisplay" class="font-cartoon font-black text-3xl md:text-4xl text-purple-800 underline decoration-amber-400 decoration-4 my-1">crunchy</div>
+                <div id="targetWordHint" class="text-xs font-bold text-slate-500">Meaning: hard and makes a loud sound when you bite it (adjective)</div>
+            </div>
+
+            <!-- Sentence Input -->
+            <div class="mb-3">
+                <textarea id="sentenceInput" rows="2" placeholder="Example: I love eating a crunchy red apple for lunch." class="w-full p-3.5 rounded-2xl border-4 border-slate-300 focus:border-purple-500 outline-none font-bold text-lg"></textarea>
+            </div>
+
+            <div id="sentenceFeedback" class="hidden p-3.5 rounded-2xl mb-4 font-bold text-sm"></div>
+
+            <div class="flex flex-wrap justify-between gap-2">
+                <button onclick="closeModal('sentenceModal')" class="btn-3d bg-slate-200 text-slate-700 font-cartoon font-bold px-4 py-2.5 rounded-2xl border-2 border-slate-400">
+                    Close
+                </button>
+                <div class="flex gap-2">
+                    <button onclick="nextTargetWord()" class="btn-3d bg-sky-400 text-sky-950 font-cartoon font-bold px-4 py-2.5 rounded-2xl border-2 border-sky-600">
+                        NEXT WORD ➔
+                    </button>
+                    <button onclick="submitSentence()" class="btn-3d bg-purple-600 hover:bg-purple-500 text-white font-cartoon font-bold px-6 py-2.5 rounded-2xl border-4 border-purple-800">
+                        SUBMIT ✔
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== MODAL: VOCABULARY WORD BOOK ==================== -->
+    <div id="vocabModal" class="hidden fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div class="max-w-3xl w-full bg-white rounded-3xl p-6 border-4 border-sky-500 shadow-2xl max-h-[85vh] flex flex-col">
+            <div class="flex justify-between items-center mb-4">
+                <div>
+                    <h3 class="font-cartoon font-bold text-2xl text-sky-900">📖 Food Explorer's Word Book</h3>
+                    <p class="text-xs text-slate-500 font-bold">Click any word card to hear its pronunciation!</p>
+                </div>
+                <button onclick="closeModal('vocabModal')" class="bg-slate-200 hover:bg-slate-300 px-3 py-1.5 rounded-xl font-bold">✖</button>
+            </div>
+            <div id="vocabGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5 overflow-y-auto pr-1"></div>
+        </div>
+    </div>
+
+    <!-- ==================== MODAL: HOW TO PLAY ==================== -->
+    <div id="howToPlayModal" class="hidden fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div class="max-w-xl w-full bg-white rounded-3xl p-6 md:p-8 border-4 border-sky-500 shadow-2xl">
+            <h3 class="font-cartoon font-bold text-2xl text-sky-900 mb-4">❓ How to Play</h3>
+            <ul class="space-y-3 text-slate-700 font-semibold text-sm md:text-base mb-6">
+                <li class="flex items-center gap-3"><span class="bg-amber-200 px-2.5 py-1 rounded-lg font-black">◀ ▶ / A D</span> Move your hero left and right.</li>
+                <li class="flex items-center gap-3"><span class="bg-emerald-200 px-2.5 py-1 rounded-lg font-black">▲ / W / Space</span> Jump in the Jungle, or Swim Up in the Ocean!</li>
+                <li class="flex items-center gap-3"><span class="bg-sky-200 px-2.5 py-1 rounded-lg font-black">▼ / S</span> Swim Down in the Ocean or crouch.</li>
+                <li class="flex items-center gap-3"><span class="bg-purple-200 px-2.5 py-1 rounded-lg font-black">Touch / Mobile</span> Use the big buttons at the bottom corners of the screen.</li>
+                <li class="flex items-center gap-3"><span class="bg-rose-200 px-2.5 py-1 rounded-lg font-black">🎯 Missions</span> Complete Reading, Listening, and Writing stations to collect all 3 Magical Treasures!</li>
+            </ul>
+            <button onclick="closeModal('howToPlayModal')" class="btn-3d w-full bg-sky-500 text-white font-cartoon font-bold py-3 rounded-2xl border-4 border-sky-700">
+                GOT IT! 👍
+            </button>
+        </div>
+    </div>
+
+    <!-- ==================== MODAL: SETTINGS & PAUSE ==================== -->
+    <div id="settingsModal" class="hidden fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div class="max-w-lg w-full bg-white rounded-3xl p-5 md:p-6 border-4 border-slate-400 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <h3 id="settingsTitle" class="font-cartoon font-bold text-2xl text-slate-800 mb-4">⚙️ Settings & Audio Lab</h3>
+            
+            <div class="space-y-3 mb-5">
+                <div>
+                    <label class="block font-bold text-slate-600 mb-1">Difficulty Level</label>
+                    <div class="grid grid-cols-3 gap-2">
+                        <button onclick="setDifficulty('easy')" id="diffEasy" class="py-2 rounded-xl font-bold border-2 border-slate-300">Easy</button>
+                        <button onclick="setDifficulty('normal')" id="diffNormal" class="py-2 rounded-xl font-bold border-2 border-emerald-500 bg-emerald-100 text-emerald-900">Normal</button>
+                        <button onclick="setDifficulty('challenge')" id="diffChallenge" class="py-2 rounded-xl font-bold border-2 border-slate-300">Challenge</button>
+                    </div>
+                </div>
+                <div class="flex justify-between items-center bg-slate-50 p-3 rounded-xl border border-slate-200">
+                    <span class="font-bold text-slate-700">Sound Effects (SFX)</span>
+                    <button onclick="toggleSound()" id="setSoundBtn" class="bg-emerald-500 text-white font-bold px-4 py-1.5 rounded-xl">ON</button>
+                </div>
+                <div class="flex justify-between items-center bg-slate-50 p-3 rounded-xl border border-slate-200">
+                    <span class="font-bold text-slate-700">Background Music</span>
+                    <button onclick="toggleMusic()" id="setMusicBtn" class="bg-emerald-500 text-white font-bold px-4 py-1.5 rounded-xl">ON</button>
+                </div>
+
+                <!-- AUDIO TEST SECTION -->
+                <div class="bg-sky-50 border-2 border-sky-300 rounded-2xl p-3.5">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="font-cartoon font-bold text-base text-sky-900">🔊 Audio & Voice Test</span>
+                        <span id="voiceSupportBadge" class="text-[11px] font-extrabold px-2 py-0.5 rounded-full bg-white border border-sky-200 text-sky-800">Checking voices...</span>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-1.5 mb-2.5">
+                        <button onclick="testVoicePlayback()" class="btn-3d bg-sky-500 hover:bg-sky-400 text-white font-bold py-2 px-2 rounded-xl text-xs border-2 border-sky-700">
+                            🗣️ TEST VOICE
+                        </button>
+                        <button onclick="playSFX('correct')" class="btn-3d bg-emerald-500 hover:bg-emerald-400 text-white font-bold py-2 px-2 rounded-xl text-xs border-2 border-emerald-700">
+                            ✅ CORRECT SFX
+                        </button>
+                        <button onclick="playSFX('wrong')" class="btn-3d bg-rose-500 hover:bg-rose-400 text-white font-bold py-2 px-2 rounded-xl text-xs border-2 border-rose-700">
+                            ❌ WRONG SFX
+                        </button>
+                        <button onclick="playSFX('click')" class="btn-3d bg-amber-400 hover:bg-amber-300 text-amber-950 font-bold py-2 px-2 rounded-xl text-xs border-2 border-amber-600">
+                            🔘 CLICK SFX
+                        </button>
+                        <button onclick="testBackgroundMusicBurst()" class="btn-3d bg-purple-500 hover:bg-purple-400 text-white font-bold py-2 px-2 rounded-xl text-xs border-2 border-purple-700">
+                            🎵 TEST MUSIC
+                        </button>
+                        <button onclick="stopSpeech('audioTestStatus')" class="btn-3d bg-slate-600 hover:bg-slate-500 text-white font-bold py-2 px-2 rounded-xl text-xs border-2 border-slate-800">
+                            ⏹️ STOP AUDIO
+                        </button>
+                    </div>
+
+                    <!-- Sample Audio Scripts Tester -->
+                    <div class="border-t border-sky-200 pt-2 mt-2">
+                        <div class="text-[11px] font-extrabold text-sky-800 uppercase mb-1">Sample Clue Scripts (Play / Replay / Stop):</div>
+                        <div class="grid grid-cols-2 gap-1.5 mb-2">
+                            <button onclick="playSampleTestScript(0)" class="bg-white hover:bg-sky-100 text-sky-900 font-bold py-1.5 px-2 rounded-lg text-xs border border-sky-300 text-left">
+                                🍌 Test 1: Banana
+                            </button>
+                            <button onclick="playSampleTestScript(1)" class="bg-white hover:bg-sky-100 text-sky-900 font-bold py-1.5 px-2 rounded-lg text-xs border border-sky-300 text-left">
+                                🥕 Test 2: Carrot
+                            </button>
+                            <button onclick="playSampleTestScript(2)" class="bg-white hover:bg-sky-100 text-sky-900 font-bold py-1.5 px-2 rounded-lg text-xs border border-sky-300 text-left">
+                                🐟 Test 3: Healthy Lunch
+                            </button>
+                            <button onclick="playSampleTestScript(3)" class="bg-white hover:bg-sky-100 text-sky-900 font-bold py-1.5 px-2 rounded-lg text-xs border border-sky-300 text-left">
+                                🍎 Test 4: At the Market
+                            </button>
+                        </div>
+                        <div class="flex gap-1.5 mb-1.5">
+                            <button onclick="replayLastTestScript()" class="bg-amber-200 hover:bg-amber-300 text-amber-950 font-bold px-2.5 py-1 rounded-lg text-xs">🔁 Replay</button>
+                            <button onclick="togglePauseResumeSpeech('audioTestStatus')" class="bg-indigo-200 hover:bg-indigo-300 text-indigo-950 font-bold px-2.5 py-1 rounded-lg text-xs">⏯️ Pause/Resume</button>
+                            <button onclick="stopSpeech('audioTestStatus')" class="bg-rose-200 hover:bg-rose-300 text-rose-950 font-bold px-2.5 py-1 rounded-lg text-xs">⏹️ Stop</button>
+                        </div>
+                    </div>
+
+                    <!-- Live Audio Status Box -->
+                    <div id="audioTestStatus" class="bg-white p-2 rounded-xl border border-sky-200 text-xs font-bold text-slate-700">
+                        Audio Status: Idle (Click TEST VOICE to hear spoken English!)
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-2">
+                <button onclick="resumeGame()" class="btn-3d w-full bg-emerald-500 text-white font-cartoon font-bold py-3 rounded-2xl border-4 border-emerald-700">
+                    RESUME ▶
+                </button>
+                <button id="pauseMapBtn" onclick="closeModal('settingsModal'); returnToMap()" class="hidden btn-3d w-full bg-amber-400 text-amber-950 font-cartoon font-bold py-2.5 rounded-2xl border-2 border-amber-600">
+                    🗺️ EXIT TO WORLD MAP
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== MODAL: TREASURE UNLOCKED / CELEBRATION ==================== -->
+    <div id="celebrationModal" class="hidden fixed inset-0 bg-slate-900/90 backdrop-blur-md flex items-center justify-center p-4 z-50">
+        <div class="max-w-xl w-full bg-white rounded-3xl p-6 md:p-8 border-4 border-yellow-400 shadow-2xl text-center max-h-[92vh] overflow-y-auto">
+            <div id="celebIcon" class="text-6xl md:text-7xl mb-2 animate-bounce">🏆</div>
+            <h2 id="celebTitle" class="font-cartoon font-black text-2xl md:text-3xl text-amber-600 mb-2">World Complete!</h2>
+            <p id="celebMessage" class="text-slate-700 font-bold text-sm md:text-base mb-4"></p>
+            
+            <div id="celebStats" class="bg-amber-50 border-2 border-amber-200 rounded-2xl p-4 mb-4 grid grid-cols-2 gap-2 text-sm font-bold text-slate-700"></div>
+
+            <!-- Final Leaderboard (Earliest to Latest Finisher) -->
+            <div id="leaderboardSection" class="hidden bg-sky-50 border-2 border-sky-300 rounded-2xl p-4 mb-5 text-left">
+                <div class="flex items-center justify-between mb-2">
+                    <h3 class="font-cartoon font-bold text-lg text-sky-900">🏆 Kingdom Speed Leaderboard</h3>
+                    <span class="text-xs font-extrabold text-sky-700 bg-sky-200/70 px-2.5 py-0.5 rounded-full">Earliest ➔ Later</span>
+                </div>
+                <div id="leaderboardList" class="space-y-1.5 max-h-44 overflow-y-auto pr-1"></div>
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-3">
+                <button id="celebMapBtn" onclick="closeCelebrationToMap()" class="hidden btn-3d sm:w-1/3 bg-amber-400 hover:bg-amber-300 text-amber-950 font-cartoon font-bold text-base py-3.5 rounded-2xl border-4 border-amber-600">
+                    🗺️ MAP
+                </button>
+                <button id="celebPrimaryBtn" onclick="closeCelebration()" class="btn-3d w-full bg-emerald-500 hover:bg-emerald-400 text-white font-cartoon font-bold text-xl py-3.5 rounded-2xl border-4 border-emerald-700">
+                    CONTINUE ADVENTURE 🚀
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== TOAST NOTIFICATION ==================== -->
+    <div id="toastBanner" class="hidden fixed top-20 left-1/2 -translate-x-1/2 bg-slate-900/90 text-white font-cartoon font-bold px-6 py-3 rounded-full shadow-2xl border-2 border-amber-400 z-50 text-center text-sm md:text-base transition-all">
+    </div>
+
+<script>
+/**
+ * ============================================================================
+ * 1. GAME STATE, VOCABULARY BANK & EDUCATIONAL CONTENT
+ * ============================================================================
+ */
+const gameState = {
+    screen: 'menu', // menu, map, world1, world2, world3
+    paused: false,
+    difficulty: 'normal', // easy, normal, challenge
+    studentName: '',
+    elapsedSeconds: 0,
+    adventureStarted: false,
+    adventureFinished: false,
+    sfxEnabled: true,
+    musicEnabled: true,
+    coins: 0,
+    stars: 0,
+    unlockedWords: new Set(['apple', 'banana', 'carrot', 'healthy', 'fresh', 'breakfast']),
+    character: {
+        preset: 0,
+        name: 'Chef Bello',
+        body: 'round',
+        eyes: 'two',
+        hair: 'sprout',
+        glasses: 'goggles',
+        outfitColor: '#2563eb',
+        outfit: 'chef',
+        hat: 'chef',
+        mouth: 'smile'
+    },
+    world1: {
+        unlocked: true,
+        completed: false,
+        checkpointsDone: [false, false, false, false, false],
+        gateUnlocked: false
+    },
+    world2: {
+        unlocked: false,
+        completed: false,
+        shellsDone: [false, false, false, false, false],
+        crosswordDone: false
+    },
+    world3: {
+        unlocked: false,
+        completed: false,
+        dialoguesDone: [false, false, false],
+        sentencesDone: 0
+    }
+};
+
+let lastFrameTime = performance.now();
+function gameLoop(now = performance.now()) {
+    const dt = Math.min(0.1, (now - lastFrameTime) / 1000);
+    lastFrameTime = now;
+
+    if (!gameState.paused && gameState.adventureStarted && !gameState.adventureFinished && ['map', 'world1', 'world2', 'world3'].includes(gameState.screen)) {
+        updateElapsedTimer(dt);
+    }
+
+    if (!gameState.paused && ['world1', 'world2', 'world3'].includes(gameState.screen)) {
+        updatePhysics();
+        renderScene();
+    }
+    requestAnimationFrame(gameLoop);
+}
+
+function formatDuration(totalSecs) {
+    const rounded = Math.floor(totalSecs);
+    const mins = Math.floor(rounded / 60);
+    const secs = rounded % 60;
+    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+}
+
+function updateElapsedTimer(dt) {
+    const prevSec = Math.floor(gameState.elapsedSeconds);
+    gameState.elapsedSeconds += dt;
+    const currSec = Math.floor(gameState.elapsedSeconds);
+
+    if (currSec !== prevSec) {
+        updateTimerDisplay();
+    }
+}
+
+function updateTimerDisplay() {
+    const formatted = formatDuration(gameState.elapsedSeconds);
+    const timerEl = document.getElementById('hudTimer');
+    if (timerEl) timerEl.textContent = formatted;
+    const mapTimerEl = document.getElementById('mapElapsedTimer');
+    if (mapTimerEl) mapTimerEl.textContent = formatted;
+}
+
+// 6 Original Helper Presets
+const CHARACTER_PRESETS = [
+    { name: "Chef Bello", desc: "Cheerful, energetic, and loves crunchy carrots!", body: 'round', eyes: 'two', hair: 'sprout', glasses: 'goggles', outfitColor: '#2563eb', outfit: 'chef', hat: 'chef', mouth: 'smile' },
+    { name: "Pip Explorer", desc: "Curious jungle scout with one giant eye!", body: 'short', eyes: 'one', hair: 'spiky', glasses: 'goggles', outfitColor: '#16a34a', outfit: 'overalls', hat: 'safari', mouth: 'cheery' },
+    { name: "Sunny Sam", desc: "Tall, bright, and always eats a balanced breakfast!", body: 'tall', eyes: 'two', hair: 'curly', glasses: 'star', outfitColor: '#ea580c', outfit: 'cape', hat: 'none', mouth: 'smile' },
+    { name: "Aqua Lulu", desc: "Loves swimming with dolphins and juicy watermelons!", body: 'round', eyes: 'happy', hair: 'sprout', glasses: 'round', outfitColor: '#9333ea', outfit: 'diver', hat: 'none', mouth: 'tongue' },
+    { name: "Professor Zest", desc: "Smart helper who knows every healthy ingredient!", body: 'tall', eyes: 'two', hair: 'bald', glasses: 'round', outfitColor: '#dc2626', outfit: 'overalls', hat: 'crown', mouth: 'o' },
+    { name: "Milo Munch", desc: "Funny little buddy who adores sweet bananas!", body: 'short', eyes: 'one', hair: 'curly', glasses: 'none', outfitColor: '#2563eb', outfit: 'overalls', hat: 'none', mouth: 'cheery' }
+];
+
+// 50+ Vocabulary Bank (Categorised)
+const VOCABULARY_BANK = [
+    // Food & Ingredients
+    { word: "apple", cat: "Fruits & Veg", icon: "🍎", def: "A crunchy, sweet or sour red or green fruit." },
+    { word: "banana", cat: "Fruits & Veg", icon: "🍌", def: "A long yellow fruit that is soft and sweet inside." },
+    { word: "orange", cat: "Fruits & Veg", icon: "🍊", def: "A round juicy citrus fruit full of Vitamin C." },
+    { word: "papaya", cat: "Fruits & Veg", icon: "🥭", def: "A tropical orange fruit with sweet soft flesh." },
+    { word: "watermelon", cat: "Fruits & Veg", icon: "🍉", def: "A huge green fruit that is red and very juicy inside." },
+    { word: "carrot", cat: "Fruits & Veg", icon: "🥕", def: "A crunchy orange vegetable that grows underground." },
+    { word: "cucumber", cat: "Fruits & Veg", icon: "🥒", def: "A cool, green, watery vegetable used in salads." },
+    { word: "spinach", cat: "Fruits & Veg", icon: "🥬", def: "Dark green leafy vegetable that makes you strong." },
+    { word: "potato", cat: "Fruits & Veg", icon: "🥔", def: "A brown vegetable grown underground; can be boiled or baked." },
+    { word: "tomato", cat: "Fruits & Veg", icon: "🍅", def: "A juicy red fruit often used in salads and sauces." },
+    { word: "rice", cat: "Grains & Meals", icon: "🍚", def: "Small white or brown grains eaten with many meals." },
+    { word: "bread", cat: "Grains & Meals", icon: "🍞", def: "Baked food made from flour, water, and yeast." },
+    { word: "noodles", cat: "Grains & Meals", icon: "🍜", def: "Long thin strips of pasta or dough cooked in soup or fried." },
+    { word: "egg", cat: "Protein", icon: "🥚", def: "Oval food laid by hens, rich in protein." },
+    { word: "chicken", cat: "Protein", icon: "🍗", def: "Popular poultry meat that gives our body protein." },
+    { word: "fish", cat: "Protein", icon: "🐟", def: "Healthy sea or river food rich in protein and good oils." },
+    { word: "milk", cat: "Dairy", icon: "🥛", def: "White nutritious drink that helps build strong bones." },
+    { word: "cheese", cat: "Dairy", icon: "🧀", def: "Yellow or white food made from milk." },
+    // Taste & Texture
+    { word: "sweet", cat: "Taste & Texture", icon: "🍯", def: "Tasting like sugar or ripe fruit." },
+    { word: "sour", cat: "Taste & Texture", icon: "🍋", def: "Having a sharp, tangy taste like a lemon." },
+    { word: "salty", cat: "Taste & Texture", icon: "🧂", def: "Tasting of salt." },
+    { word: "bitter", cat: "Taste & Texture", icon: "☕", def: "Having a sharp, unsweet taste like dark cocoa." },
+    { word: "spicy", cat: "Taste & Texture", icon: "🌶️", def: "Having a hot flavour from chilli or pepper." },
+    { word: "crunchy", cat: "Taste & Texture", icon: "🥨", def: "Firm and making a crisp sound when chewed." },
+    { word: "crispy", cat: "Taste & Texture", icon: " crackers", def: "Pleasantly thin, dry, and easily broken." },
+    { word: "juicy", cat: "Taste & Texture", icon: "💦", def: "Full of natural liquid and flavour." },
+    { word: "soft", cat: "Taste & Texture", icon: "☁️", def: "Easy to chew or press, not hard." },
+    { word: "fresh", cat: "Taste & Texture", icon: "🌿", def: "Newly picked or made; not old or stale." },
+    { word: "delicious", cat: "Taste & Texture", icon: "😋", def: "Tasting extremely good!" },
+    { word: "creamy", cat: "Taste & Texture", icon: "🍦", def: "Smooth, thick, and soft like cream or yoghurt." },
+    // Meals & Preparation
+    { word: "breakfast", cat: "Meals & Prep", icon: "🌅", def: "The first healthy meal you eat in the morning." },
+    { word: "lunch", cat: "Meals & Prep", icon: "☀️", def: "A meal eaten in the middle of the day." },
+    { word: "dinner", cat: "Meals & Prep", icon: "🌙", def: "The main evening meal." },
+    { word: "snack", cat: "Meals & Prep", icon: "🍓", def: "A small amount of food eaten between meals." },
+    { word: "ingredients", cat: "Meals & Prep", icon: "🥣", def: "The different foods used to make a dish." },
+    { word: "recipe", cat: "Meals & Prep", icon: "📜", def: "Instructions that tell you how to cook a meal." },
+    { word: "prepare", cat: "Meals & Prep", icon: "👩‍🍳", def: "To get food ready for cooking or eating." },
+    { word: "chop", cat: "Meals & Prep", icon: "🔪", def: "To cut food into small pieces." },
+    { word: "mix", cat: "Meals & Prep", icon: "🥄", def: "To stir ingredients together." },
+    { word: "boil", cat: "Meals & Prep", icon: "♨️", def: "To cook food in very hot bubbling water." },
+    { word: "bake", cat: "Meals & Prep", icon: "🔥", def: "To cook food like bread or cake inside an oven." },
+    { word: "serve", cat: "Meals & Prep", icon: "🍽️", def: "To put food onto plates for people to eat." },
+    // Healthy Eating
+    { word: "healthy", cat: "Healthy Eating", icon: "💪", def: "Good for your body and mind." },
+    { word: "balanced", cat: "Healthy Eating", icon: "⚖️", def: "Having the right amounts of different food groups." },
+    { word: "energy", cat: "Healthy Eating", icon: "⚡", def: "Strength and power to run, play, and learn." },
+    { word: "nutrients", cat: "Healthy Eating", icon: "🧬", def: "Good things in food that help us grow." },
+    { word: "vegetables", cat: "Healthy Eating", icon: "🥦", def: "Healthy plants we eat, like carrots and spinach." },
+    { word: "fruits", cat: "Healthy Eating", icon: "🍇", def: "Sweet, healthy foods that grow on trees or plants." },
+    { word: "grains", cat: "Healthy Eating", icon: "🌾", def: "Seeds like rice, oats, and wheat that give energy." },
+    { word: "protein", cat: "Healthy Eating", icon: "🥩", def: "Nutrient in fish, eggs, and beans that builds muscles." },
+    { word: "portion", cat: "Healthy Eating", icon: "🥗", def: "The amount of food served to one person." },
+    { word: "nutritious", cat: "Healthy Eating", icon: "🌟", def: "Full of vitamins and nutrients for good health." }
+];
+
+// World 1: 5 Reading Checkpoints + Final Gate Challenge
+const READING_CHECKPOINTS = [
+    {
+        id: 0,
+        title: "Checkpoint 1: The School Picnic",
+        type: "Specific Information",
+        passage: "On Friday morning, Year 5 pupils went to Sunny Park for a school picnic. Amina brought a big basket with crunchy carrots, sweet bananas, and wholemeal bread sandwiches. Her friend Ben brought a bottle of fresh water and juicy red apples. They sat under a tall tree and shared their healthy snacks happily.",
+        question: "What two foods did Amina bring in her basket? (Write at least one or both)",
+        keywords: ["carrot", "banana", "bread", "sandwich"],
+        hint: "Look at the second sentence: Amina brought a big basket with...",
+        unlockWords: ["crunchy", "sandwich", "snack"]
+    },
+    {
+        id: 1,
+        title: "Checkpoint 2: At the Morning Market",
+        type: "Main Idea",
+        passage: "Every Sunday, Maya visits the local food market with her father. The stalls are full of colourful vegetables like green spinach, orange pumpkins, and red tomatoes. Maya loves smelling the fresh fruits and choosing nutritious ingredients for their family meals. Buying fresh food helps them cook tasty dishes at home.",
+        question: "What is this story mainly about? (Hint: Where do Maya and her father go and what do they buy?)",
+        keywords: ["market", "fresh", "vegetable", "fruit", "food", "buy", "ingredient"],
+        hint: "Think about the place Maya visits on Sunday and what she chooses there.",
+        unlockWords: ["spinach", "tomato", "ingredients"]
+    },
+    {
+        id: 2,
+        title: "Checkpoint 3: Why Breakfast Matters",
+        type: "Explain a Reason",
+        passage: "Daniel always eats a balanced breakfast before walking to school. Today, he ate a boiled egg, two slices of bread, and a cup of warm milk. His mother says breakfast is very important because it gives his brain and body energy to study and play sports during the morning.",
+        question: "Why does Daniel's mother say breakfast is very important?",
+        keywords: ["energy", "study", "play", "brain", "body"],
+        hint: "Read the last sentence carefully: '...because it gives his brain and body...'",
+        unlockWords: ["breakfast", "balanced", "energy", "boil"]
+    },
+    {
+        id: 3,
+        title: "Checkpoint 4: Making Vegetable Soup",
+        type: "Sequence of Events",
+        passage: "Chef Leo is preparing a pot of delicious vegetable soup for lunch. First, he washes the potatoes and carrots in clean water. Next, he chops them into small pieces on a wooden board. Finally, he puts all the vegetables into a pot and boils them with a little salt until they are soft.",
+        question: "What does Chef Leo do right AFTER he washes the potatoes and carrots?",
+        keywords: ["chop", "cut", "small", "piece"],
+        hint: "Look for the word 'Next,' in the passage!",
+        unlockWords: ["prepare", "chop", "potato", "soft"]
+    },
+    {
+        id: 4,
+        title: "Checkpoint 5: Choosing a Healthy Lunch",
+        type: "Simple Inference",
+        passage: "At the school canteen, Siti looked at two trays. Tray A had oily fried chips and a sugary soda drink. Tray B had steamed rice, grilled fish, cucumber slices, and a slice of sweet papaya. Siti smiled and picked Tray B because she wants to keep her body strong and fit for netball practice.",
+        question: "Which tray is healthier, and why did Siti choose it?",
+        keywords: ["b", "healthy", "strong", "fit", "netball", "fish", "rice"],
+        hint: "Compare Tray A and Tray B. Which one did Siti pick to stay strong and fit?",
+        unlockWords: ["fish", "cucumber", "papaya", "nutritious"]
+    }
+];
+
+const READING_GATE_CHALLENGE = {
+    title: "The Ancient Jungle Gate",
+    type: "Final Gate Riddle",
+    passage: "To open the Ancient Gate, read the golden inscription: 'A balanced plate needs grains for energy, protein for strong muscles, and colourful fruits and vegetables for vitamins. Remember to drink plenty of clean water every day!'",
+    question: "According to the golden gate, what food group do we need for strong muscles?",
+    keywords: ["protein"],
+    hint: "Look at the words: '_______ for strong muscles'.",
+    unlockWords: ["protein", "grains", "portion"]
+};
+
+// World 2: 10 Hidden Audio Shells
+const AUDIO_SHELLS = [
+    { id: 0, word: "banana", clue: "Hello, explorer! I am long and yellow. Monkeys love me, and I am easy to peel. What am I?", choices: ["banana", "carrot", "bread"] },
+    { id: 1, word: "carrot", clue: "Look at my bright orange colour! I grow under the ground, and rabbits love to crunch on me. What am I?", choices: ["tomato", "carrot", "cheese"] },
+    { id: 2, word: "rice", clue: "Good morning! I am small, white, and made from grains. Many families eat me every day for lunch and dinner. What am I?", choices: ["milk", "rice", "egg"] },
+    { id: 3, word: "watermelon", clue: "I am huge and green on the outside, but bright red and super juicy on the inside! What fruit am I?", choices: ["watermelon", "spinach", "potato"] },
+    { id: 4, word: "milk", clue: "I am a white, creamy drink that comes from cows. Drinking me gives you calcium for strong teeth and bones. What am I?", choices: ["juice", "milk", "soup"] },
+    { id: 5, word: "crunchy", clue: "Listen to that sound! When you bite into a fresh apple or a raw carrot, it is firm and noisy. Which texture word is this?", choices: ["soft", "crunchy", "creamy"] },
+    { id: 6, word: "breakfast", clue: "Wake up, sleepyhead! It is seven o'clock in the morning. Before you go to school, you must eat this first meal of the day. What meal is it?", choices: ["dinner", "lunch", "breakfast"] },
+    { id: 7, word: "fish", clue: "I swim in the deep blue ocean! When cooked, I give your body healthy protein to grow strong. What food am I?", choices: ["fish", "bread", "noodles"] },
+    { id: 8, word: "sour", clue: "Ooh, my face is scrunching up! When you taste a yellow lemon or a green lime, it tastes very tangy. Which taste word is this?", choices: ["sweet", "salty", "sour"] },
+    { id: 9, word: "chop", clue: "Chef Mia is in the kitchen with a cutting board. She cuts the onions and tomatoes into tiny pieces. What cooking action is she doing?", choices: ["boil", "chop", "bake"] }
+];
+
+// World 2: Functional Crossword (Interlocking Grid 8x8)
+// Words:
+// 1 ACROSS (row 1, col 1): APPLE (5) -> A(1,1) P(1,2) P(1,3) L(1,4) E(1,5)
+// 2 DOWN   (row 0, col 2): SPICY (5) -> S(0,2) P(1,2) I(2,2) C(3,2) Y(4,2)
+// 3 ACROSS (row 3, col 1): JUICY (5) -> J(3,1) U(3,2-wait: C is at 3,2! Let's fix!)
+// Let's design exact valid intersections:
+// Row 1, Col 1..5: A P P L E  (1 ACROSS: "A crunchy red or green fruit that grows on a tree.")
+// Col 3, Row 1..6: P O T A T O (2 DOWN: "A brown vegetable grown under the ground that you can boil or bake.") -> shares P at (1,3)!
+// Row 4, Col 2..6: S A L T Y  (3 ACROSS: "How sea water or crisps taste when you add too much salt.") -> shares A at (4,3)!
+// Col 5, Row 1..4: E G G S -> let's use E G G (3 letters) or B A K E:
+// Row 6, Col 1..5: H O N E Y or F R E S H -> shares O at (6,3)! Let's check: (6,3) is O of POTATO!
+// If (6,3) is O: S P O O N (Col 1..5: S(6,1) P(6,2) O(6,3) O(6,4) N(6,5)) or L E M O N (L(6,1) E(6,2) M(6,3) no, O is at 6,3 -> L E M O N has O at index 3! L(6,0) E(6,1) M(6,2) O(6,3) N(6,4)!)
+// Let's verify L E M O N at Row 6, Col 0..4:
+// (6,0)=L, (6,1)=E, (6,2)=M, (6,3)=O (matches POTATO's last letter O at 6,3!), (6,4)=N!
+// Let's add 1 more Down word intersecting APPLE at (1,5)='E' or (1,1)='A':
+// World 2: Functional Crossword (5 Words Hidden in 5 Ocean Shells)
+const CROSSWORD_DATA = {
+    rows: 8,
+    cols: 7,
+    clues: [
+        { num: 1, dir: 'ACROSS', row: 1, col: 1, word: 'APPLE', audio: "Clue 1 Across: I am a crunchy red or green fruit that grows on a tree. Five letters." },
+        { num: 2, dir: 'DOWN',   row: 1, col: 3, word: 'POTATO', audio: "Clue 2 Down: I am a brown vegetable that grows under the ground. You can boil or bake me. Six letters." },
+        { num: 3, dir: 'ACROSS', row: 4, col: 2, word: 'SALTY', audio: "Clue 3 Across: This taste word describes food with lots of salt, like ocean water. Five letters." },
+        { num: 4, dir: 'DOWN',   row: 1, col: 5, word: 'EGG', audio: "Clue 4 Down: I am a white or brown oval breakfast food full of protein. Three letters." },
+        { num: 5, dir: 'ACROSS', row: 6, col: 0, word: 'LEMON', audio: "Clue 5 Across: I am a bright yellow fruit with a very sour taste. Five letters." }
+    ]
+};
+
+// World 3: 3 Interactive Dialogues
+const FACTORY_DIALOGUES = [
+    {
+        id: 0,
+        title: "Station 1: At the Food Market",
+        lines: [
+            { speaker: "Mia", text: "Good morning! What would you like to buy today?" },
+            { speaker: "Leo", text: "I would like some <u class='text-amber-600 font-black'>fresh</u> red apples and green spinach." },
+            { speaker: "Mia", text: "Great choice! Those vegetables are very <u class='text-emerald-600 font-black'>nutritious</u>." },
+            { speaker: "Leo", text: "Yes! I want to <u class='text-sky-600 font-black'>prepare</u> a healthy lunch for my family." }
+        ],
+        matches: [
+            { word: "fresh", correct: "Newly picked and clean, not old", options: ["Newly picked and clean, not old", "Very spicy and hot", "Cooked in oil"] },
+            { word: "nutritious", correct: "Full of good vitamins for our body", options: ["Tasting very salty", "Full of good vitamins for our body", "Hard to chew"] },
+            { word: "prepare", correct: "To get food ready for cooking or eating", options: ["To throw food away", "To sleep after lunch", "To get food ready for cooking or eating"] }
+        ]
+    },
+    {
+        id: 1,
+        title: "Station 2: In the Kitchen",
+        lines: [
+            { speaker: "Chef Pip", text: "Let's check our <u class='text-amber-600 font-black'>recipe</u> for fruit salad!" },
+            { speaker: "Lulu", text: "I have washed all the <u class='text-emerald-600 font-black'>ingredients</u>: papaya, banana, and watermelon." },
+            { speaker: "Chef Pip", text: "Awesome! Please <u class='text-sky-600 font-black'>chop</u> the fruit carefully, then mix them in a bowl." }
+        ],
+        matches: [
+            { word: "recipe", correct: "Instructions on how to make a dish", options: ["A big soup pot", "Instructions on how to make a dish", "A type of sweet fruit"] },
+            { word: "ingredients", correct: "The different foods used to cook a meal", options: ["Kitchen plates and spoons", "People eating dinner", "The different foods used to cook a meal"] },
+            { word: "chop", correct: "To cut food into smaller pieces", options: ["To cut food into smaller pieces", "To drink water quickly", "To freeze in ice"] }
+        ]
+    },
+    {
+        id: 2,
+        title: "Station 3: Healthy Lunchtime",
+        lines: [
+            { speaker: "Sam", text: "Mmm, this grilled chicken is so <u class='text-amber-600 font-black'>delicious</u>!" },
+            { speaker: "Amina", text: "And look at your plate—you have a <u class='text-emerald-600 font-black'>balanced</u> meal with rice and vegetables." },
+            { speaker: "Sam", text: "Thank you! Eating well gives me <u class='text-sky-600 font-black'>energy</u> for football practice." }
+        ],
+        matches: [
+            { word: "delicious", correct: "Tasting extremely good and yummy", options: ["Tasting extremely good and yummy", "Tasting sour like vinegar", "Cold and frozen"] },
+            { word: "balanced", correct: "Having the right mix of healthy food groups", options: ["Eating only candy", "Having the right mix of healthy food groups", "Standing on one foot"] },
+            { word: "energy", correct: "Strength and power to play and learn", options: ["Feeling sleepy", "Strength and power to play and learn", "A kitchen tool"] }
+        ]
+    }
+];
+
+// World 3: 18 Target Words for Sentence Creation
+const SENTENCE_TARGETS = [
+    { word: "crunchy", hint: "firm and makes a crisp sound when chewed (e.g., carrots, apples)" },
+    { word: "delicious", hint: "tasting extremely good and yummy" },
+    { word: "healthy", hint: "good for your body and keeps you strong" },
+    { word: "fresh", hint: "newly picked or made, not old" },
+    { word: "sweet", hint: "tasting like sugar, honey, or ripe fruit" },
+    { word: "juicy", hint: "full of natural fruit juice" },
+    { word: "prepare", hint: "to get a meal ready to eat or cook" },
+    { word: "ingredients", hint: "the foods used to make a recipe" },
+    { word: "market", hint: "a place where people buy fresh fruits and vegetables" },
+    { word: "vegetables", hint: "healthy plants like spinach, carrots, and potatoes" },
+    { word: "breakfast", hint: "the first meal of the day in the morning" },
+    { word: "balanced", hint: "a meal with grains, protein, fruits, and vegetables" },
+    { word: "energy", hint: "power to run, study, and play" },
+    { word: "chop", hint: "to cut vegetables or fruit into pieces" },
+    { word: "boil", hint: "to cook food in hot bubbling water" },
+    { word: "protein", hint: "found in fish, eggs, and chicken to build muscles" },
+    { word: "sour", hint: "tangy taste like a lemon" },
+    { word: "nutritious", hint: "full of vitamins and nutrients" }
+];
+
+/**
+ * ============================================================================
+ * 2. WEB AUDIO API (SOUND EFFECTS) & WEB SPEECH API (SPOKEN CLUES)
+ * ============================================================================
+ */
+let audioCtx = null;
+function initAudioContext() {
+    try {
+        if (!audioCtx) {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (AudioContext) audioCtx = new AudioContext();
+        }
+        if (audioCtx && audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
+    } catch (e) {
+        console.warn("AudioContext init failed:", e);
+    }
+}
+
+// Unlock AudioContext & warm up SpeechSynthesis on first user pointer/key gesture
+function unlockAllAudioOnGesture() {
+    initAudioContext();
+    if ('speechSynthesis' in window) {
+        loadVoices();
+    }
+}
+window.addEventListener('pointerdown', unlockAllAudioOnGesture, { once: true });
+window.addEventListener('keydown', unlockAllAudioOnGesture, { once: true });
+
+function playSFX(type) {
+    if (!gameState.sfxEnabled) return;
+    try {
+        initAudioContext();
+        if (!audioCtx) return;
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        if (type === 'click') {
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(520, now);
+            osc.frequency.exponentialRampToValueAtTime(780, now + 0.07);
+            gain.gain.setValueAtTime(0.18, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+            osc.start(now); osc.stop(now + 0.08);
+        } else if (type === 'jump') {
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(260, now);
+            osc.frequency.exponentialRampToValueAtTime(600, now + 0.19);
+            gain.gain.setValueAtTime(0.2, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+            osc.start(now); osc.stop(now + 0.2);
+        } else if (type === 'swim') {
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(320, now);
+            osc.frequency.exponentialRampToValueAtTime(500, now + 0.14);
+            gain.gain.setValueAtTime(0.12, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+            osc.start(now); osc.stop(now + 0.15);
+        } else if (type === 'coin') {
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(987.77, now); // B5
+            osc.frequency.setValueAtTime(1318.51, now + 0.07); // E6
+            gain.gain.setValueAtTime(0.18, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.24);
+            osc.start(now); osc.stop(now + 0.24);
+        } else if (type === 'correct') {
+            const notes = [523.25, 659.25, 783.99, 1046.50]; // C5 E5 G5 C6
+            notes.forEach((freq, i) => {
+                const o = audioCtx.createOscillator();
+                const g = audioCtx.createGain();
+                o.type = 'triangle';
+                o.connect(g); g.connect(audioCtx.destination);
+                o.frequency.setValueAtTime(freq, now + i * 0.08);
+                g.gain.setValueAtTime(0.22, now + i * 0.08);
+                g.gain.exponentialRampToValueAtTime(0.01, now + i * 0.08 + 0.26);
+                o.start(now + i * 0.08); o.stop(now + i * 0.08 + 0.26);
+            });
+        } else if (type === 'wrong') {
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(340, now);
+            osc.frequency.linearRampToValueAtTime(250, now + 0.26);
+            gain.gain.setValueAtTime(0.18, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.28);
+            osc.start(now); osc.stop(now + 0.28);
+        } else if (type === 'treasure') {
+            const fanfare = [523.25, 659.25, 783.99, 1046.5, 783.99, 1046.5];
+            fanfare.forEach((freq, i) => {
+                const o = audioCtx.createOscillator();
+                const g = audioCtx.createGain();
+                o.type = 'triangle';
+                o.connect(g); g.connect(audioCtx.destination);
+                o.frequency.setValueAtTime(freq, now + i * 0.11);
+                g.gain.setValueAtTime(0.22, now + i * 0.11);
+                g.gain.exponentialRampToValueAtTime(0.01, now + i * 0.11 + 0.3);
+                o.start(now + i * 0.11); o.stop(now + i * 0.11 + 0.3);
+            });
+        }
+    } catch (e) {
+        console.warn("SFX playback error:", e);
+    }
+}
+
+// Gentle Background Ambient Synth Loop
+let bgmInterval = null;
+function startBackgroundMusic() {
+    initAudioContext();
+    if (bgmInterval) clearInterval(bgmInterval);
+    let step = 0;
+    const melody = [261.63, 329.63, 392.00, 329.63, 293.66, 349.23, 440.00, 392.00];
+    bgmInterval = setInterval(() => {
+        if (!gameState.musicEnabled || gameState.paused || gameState.screen === 'menu') return;
+        try {
+            initAudioContext();
+            if (!audioCtx || audioCtx.state !== 'running') return;
+            const now = audioCtx.currentTime;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(melody[step % melody.length], now);
+            gain.gain.setValueAtTime(0.035, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.start(now); osc.stop(now + 0.36);
+            step++;
+        } catch (e) {}
+    }, 450);
+}
+
+function testBackgroundMusicBurst() {
+    initAudioContext();
+    const statusEl = document.getElementById('audioTestStatus');
+    if (!audioCtx) {
+        if (statusEl) statusEl.textContent = "⚠️ Web Audio API not supported in this browser.";
+        return;
+    }
+    const notes = [261.63, 329.63, 392.00, 523.25];
+    const now = audioCtx.currentTime;
+    notes.forEach((freq, i) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, now + i * 0.16);
+        gain.gain.setValueAtTime(0.14, now + i * 0.16);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.16 + 0.25);
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.start(now + i * 0.16); osc.stop(now + i * 0.16 + 0.26);
+    });
+    if (statusEl) statusEl.textContent = "🎵 Playing background music melody test!";
+}
+
+// ============================================================================
+// DUAL-ENGINE SPOKEN VOICE SYSTEM (GEMINI CLOUD TTS + BROWSER FALLBACK)
+// ============================================================================
+let availableVoices = [];
+let activeUtterance = null;
+let speechTimer = null;
+let lastSpokenText = "";
+let lastSpeechStatusId = null;
+let currentAudioElement = null;
+let ttsAbortController = null;
+const ttsAudioCache = new Map(); // Cache generated WAV blob URLs for instant replay
+
+function base64ToArrayBuffer(base64) {
+    const binaryString = atob(base64);
+    const len = binaryString.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+    }
+    return bytes.buffer;
+}
+
+function pcmToWav(pcm16, sampleRate) {
+    const numChannels = 1;
+    const byteRate = sampleRate * numChannels * 2;
+    const blockAlign = numChannels * 2;
+    const dataSize = pcm16.length * 2;
+    const buffer = new ArrayBuffer(44 + dataSize);
+    const view = new DataView(buffer);
+
+    function writeString(offset, str) {
+        for (let i = 0; i < str.length; i++) {
+            view.setUint8(offset + i, str.charCodeAt(i));
+        }
+    }
+
+    writeString(0, 'RIFF');
+    view.setUint32(4, 36 + dataSize, true);
+    writeString(8, 'WAVE');
+    writeString(12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true); // PCM format
+    view.setUint16(22, numChannels, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, byteRate, true);
+    view.setUint16(32, blockAlign, true);
+    view.setUint16(34, 16, true); // 16-bit
+    writeString(36, 'data');
+    view.setUint32(40, dataSize, true);
+
+    let offset = 44;
+    for (let i = 0; i < pcm16.length; i++, offset += 2) {
+        view.setInt16(offset, pcm16[i], true);
+    }
+    return new Blob([view], { type: 'audio/wav' });
+}
+
+async function fetchGeminiTTSAudioUrl(text, signal) {
+    if (ttsAudioCache.has(text)) {
+        return ttsAudioCache.get(text);
+    }
+    const apiKey = "";
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
+    const payload = {
+        contents: [{
+            parts: [{ text: `Read warmly, clearly, and expressively to a 10-year-old primary school student: ${text}` }]
+        }],
+        generationConfig: {
+            responseModalities: ["AUDIO"],
+            speechConfig: {
+                voiceConfig: {
+                    prebuiltVoiceConfig: { voiceName: "Puck" }
+                }
+            }
+        },
+        model: "gemini-2.5-flash-preview-tts"
+    };
+
+    let delay = 800;
+    for (let attempt = 0; attempt < 3; attempt++) {
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+            signal
+        });
+        if (response.ok) {
+            const result = await response.json();
+            const part = result?.candidates?.[0]?.content?.parts?.[0];
+            const audioData = part?.inlineData?.data;
+            const mimeType = part?.inlineData?.mimeType || "";
+            if (audioData && mimeType.startsWith("audio/")) {
+                const rateMatch = mimeType.match(/rate=(\d+)/);
+                const sampleRate = rateMatch ? parseInt(rateMatch[1], 10) : 24000;
+                const pcmBuffer = base64ToArrayBuffer(audioData);
+                const pcm16 = new Int16Array(pcmBuffer);
+                const wavBlob = pcmToWav(pcm16, sampleRate);
+                const url = URL.createObjectURL(wavBlob);
+                ttsAudioCache.set(text, url);
+                return url;
+            }
+            throw new Error("Invalid audio payload");
+        }
+        if (response.status === 429 || response.status >= 500) {
+            await new Promise(r => setTimeout(r, delay));
+            delay *= 2;
+        } else {
+            throw new Error(`HTTP ${response.status}`);
+        }
+    }
+    throw new Error("TTS request failed");
+}
+
+function loadVoices() {
+    if (!('speechSynthesis' in window)) return [];
+    const voices = window.speechSynthesis.getVoices();
+    if (voices && voices.length > 0) {
+        availableVoices = voices;
+    }
+    updateVoiceSupportBadge();
+    return availableVoices;
+}
+
+function updateVoiceSupportBadge() {
+    const badge = document.getElementById('voiceSupportBadge');
+    if (!badge) return;
+    badge.textContent = "✅ HD Narrator Ready";
+    badge.className = "text-[11px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800";
+}
+
+if ('speechSynthesis' in window) {
+    loadVoices();
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+}
+
+function stopSpeech(statusElementId = null) {
+    if (speechTimer) {
+        clearTimeout(speechTimer);
+        speechTimer = null;
+    }
+    if (ttsAbortController) {
+        ttsAbortController.abort();
+        ttsAbortController = null;
+    }
+    if (currentAudioElement) {
+        try {
+            currentAudioElement.pause();
+            currentAudioElement.currentTime = 0;
+        } catch (e) {}
+        currentAudioElement = null;
+    }
+    if ('speechSynthesis' in window) {
+        try {
+            window.speechSynthesis.cancel();
+        } catch (e) {}
+    }
+    activeUtterance = null;
+    const targetId = statusElementId || lastSpeechStatusId;
+    if (targetId) {
+        const el = document.getElementById(targetId);
+        if (el) el.textContent = "⏹️ Stopped.";
+    }
+}
+
+function togglePauseResumeSpeech(statusElementId = null) {
+    const targetId = statusElementId || lastSpeechStatusId;
+    const statusEl = targetId ? document.getElementById(targetId) : null;
+
+    if (currentAudioElement) {
+        if (currentAudioElement.paused && currentAudioElement.currentTime > 0 && !currentAudioElement.ended) {
+            currentAudioElement.play();
+            if (statusEl) statusEl.textContent = "🔊 Resumed playing...";
+        } else if (!currentAudioElement.paused) {
+            currentAudioElement.pause();
+            if (statusEl) statusEl.textContent = "⏸️ Paused. Click Pause/Resume to continue.";
+        } else if (lastSpokenText) {
+            speakText(lastSpokenText, targetId);
+        }
+        return;
+    }
+
+    if ('speechSynthesis' in window) {
+        try {
+            if (window.speechSynthesis.paused) {
+                window.speechSynthesis.resume();
+                if (statusEl) statusEl.textContent = "▶️ Resumed playing...";
+            } else if (window.speechSynthesis.speaking) {
+                window.speechSynthesis.pause();
+                if (statusEl) statusEl.textContent = "⏸️ Paused. Click Pause/Resume to continue.";
+            } else if (lastSpokenText) {
+                speakText(lastSpokenText, targetId);
+            }
+        } catch (e) {}
+    }
+}
+
+function fallbackBrowserSpeak(text, statusEl, onBlockedCallback) {
+    if (!('speechSynthesis' in window)) {
+        if (statusEl) statusEl.textContent = "⚠️ Spoken audio unavailable — Transcript shown below!";
+        if (onBlockedCallback) onBlockedCallback();
+        return;
+    }
+    try {
+        window.speechSynthesis.cancel();
+        speechTimer = setTimeout(() => {
+            const voices = loadVoices();
+            const utterance = new SpeechSynthesisUtterance(text);
+            activeUtterance = utterance;
+            const preferredVoice =
+                voices.find(v => v.lang.includes('en-GB')) ||
+                voices.find(v => v.lang.startsWith('en'));
+            if (preferredVoice) {
+                utterance.voice = preferredVoice;
+                utterance.lang = preferredVoice.lang;
+            } else {
+                utterance.lang = 'en-GB';
+            }
+            utterance.rate = 0.92;
+            utterance.pitch = 1.08;
+
+            let started = false;
+            const guard = setTimeout(() => {
+                if (!started && !window.speechSynthesis.speaking) {
+                    if (statusEl) statusEl.textContent = "⚠️ Browser speech blocked — Transcript shown below!";
+                    if (onBlockedCallback) onBlockedCallback();
+                }
+            }, 900);
+
+            utterance.onstart = () => {
+                started = true;
+                clearTimeout(guard);
+                if (statusEl) statusEl.textContent = "🔊 Playing voice clue...";
+            };
+            utterance.onend = () => {
+                clearTimeout(guard);
+                activeUtterance = null;
+                if (statusEl) statusEl.textContent = "✅ Finished! Press Replay to listen again.";
+            };
+            utterance.onerror = () => {
+                clearTimeout(guard);
+                activeUtterance = null;
+                if (statusEl) statusEl.textContent = "⚠️ Audio unavailable — Transcript shown below!";
+                if (onBlockedCallback) onBlockedCallback();
+            };
+            window.speechSynthesis.speak(utterance);
+        }, 60);
+    } catch (e) {
+        if (statusEl) statusEl.textContent = "⚠️ Audio unavailable — Transcript shown below!";
+        if (onBlockedCallback) onBlockedCallback();
+    }
+}
+
+async function speakText(text, statusElementId = null, onBlockedCallback = null) {
+    stopSpeech(); // Stop any previous audio or speech cleanly
+    lastSpokenText = text;
+    lastSpeechStatusId = statusElementId;
+    const statusEl = statusElementId ? document.getElementById(statusElementId) : null;
+
+    initAudioContext();
+    if (statusEl) statusEl.textContent = "⏳ Loading friendly narrator voice...";
+
+    ttsAbortController = new AbortController();
+    const signal = ttsAbortController.signal;
+
+    try {
+        const audioUrl = await fetchGeminiTTSAudioUrl(text, signal);
+        if (signal.aborted) return;
+
+        const audio = new Audio(audioUrl);
+        currentAudioElement = audio;
+
+        audio.onplay = () => {
+            if (statusEl) statusEl.textContent = "🔊 Playing spoken clue...";
+        };
+        audio.onpause = () => {
+            if (!audio.ended && audio.currentTime > 0 && statusEl) {
+                statusEl.textContent = "⏸️ Paused.";
+            }
+        };
+        audio.onended = () => {
+            if (statusEl) statusEl.textContent = "✅ Finished! Press Replay to listen again.";
+        };
+        audio.onerror = () => {
+            fallbackBrowserSpeak(text, statusEl, onBlockedCallback);
+        };
+
+        await audio.play();
+    } catch (err) {
+        if (err && err.name === 'AbortError') return;
+        // Fallback to browser SpeechSynthesis if offline or API unavailable
+        fallbackBrowserSpeak(text, statusEl, onBlockedCallback);
+    }
+}
+
+// Sample Audio Test Scripts for Settings Audio Lab
+const SAMPLE_TEST_SCRIPTS = [
+    { name: "Test 1 – Banana", text: "Hello, explorer! I am yellow and sweet. I am easy to peel. Can you guess what I am?" },
+    { name: "Test 2 – Carrot", text: "Look at my bright orange colour! I grow under the ground. Rabbits love me. What am I?" },
+    { name: "Test 3 – Healthy Lunch", text: "Tom is preparing lunch. He has rice, vegetables and grilled fish. What is Tom preparing?" },
+    { name: "Test 4 – At the Market", text: "Good morning! I would like three red apples and two fresh carrots, please." }
+];
+let lastTestScriptIndex = -1;
+
+function testVoicePlayback() {
+    lastTestScriptIndex = -1;
+    speakText("Hello, Food Explorer! Welcome to the Healthy Kingdom!", "audioTestStatus");
+}
+
+function playSampleTestScript(idx) {
+    lastTestScriptIndex = idx;
+    const item = SAMPLE_TEST_SCRIPTS[idx];
+    speakText(item.text, "audioTestStatus");
+}
+
+function replayLastTestScript() {
+    if (lastTestScriptIndex >= 0) {
+        playSampleTestScript(lastTestScriptIndex);
+    } else {
+        testVoicePlayback();
+    }
+}
+
+/**
+ * ============================================================================
+ * 3. CHARACTER RENDERING ENGINE (CUSTOMISABLE 2D CARTOON HERO)
+ * ============================================================================
+ */
+function drawCharacter(ctx, x, y, width, height, charConfig, animState) {
+    ctx.save();
+    ctx.translate(x + width / 2, y + height / 2);
+    if (animState.facing === -1) ctx.scale(-1, 1);
+
+    // Subtle squash/stretch or swimming tilt
+    if (animState.isSwimming) {
+        ctx.rotate(Math.sin(animState.time * 6) * 0.15 + (animState.vx * 0.04));
+    } else if (!animState.grounded) {
+        ctx.scale(0.92, 1.08);
+    } else if (Math.abs(animState.vx) > 0.5) {
+        ctx.translate(0, Math.abs(Math.sin(animState.time * 14)) * -4);
+    }
+
+    // Body dimensions based on shape
+    let bw = width * 0.72;
+    let bh = height * 0.76;
+    if (charConfig.body === 'tall') { bw *= 0.88; bh *= 1.12; }
+    if (charConfig.body === 'short') { bw *= 1.1; bh *= 0.86; }
+
+    // Super Hero Cape (behind body)
+    if (charConfig.outfit === 'cape') {
+        ctx.fillStyle = '#ef4444';
+        ctx.beginPath();
+        ctx.moveTo(-bw * 0.3, -bh * 0.1);
+        ctx.lineTo(-bw * 0.85 - Math.sin(animState.time * 10) * 6, bh * 0.45);
+        ctx.lineTo(-bw * 0.1, bh * 0.4);
+        ctx.closePath();
+        ctx.fill();
+    }
+
+    // Legs & Boots
+    const legSwing = animState.isSwimming ? Math.sin(animState.time * 12) * 8 : Math.sin(animState.time * 14) * (Math.abs(animState.vx) > 0.2 ? 7 : 0);
+    ctx.fillStyle = '#1e293b';
+    ctx.beginPath();
+    ctx.roundRect(-bw * 0.28 + legSwing, bh * 0.32, 10, 14, 5);
+    ctx.roundRect(bw * 0.08 - legSwing, bh * 0.32, 10, 14, 5);
+    ctx.fill();
+
+    // Arms
+    const armSwing = Math.cos(animState.time * 14) * (Math.abs(animState.vx) > 0.2 ? 12 : 3);
+    ctx.strokeStyle = '#facc15';
+    ctx.lineWidth = 7;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(-bw * 0.45, 0);
+    ctx.lineTo(-bw * 0.65, 10 + armSwing);
+    ctx.moveTo(bw * 0.45, 0);
+    ctx.lineTo(bw * 0.65, 10 - armSwing);
+    ctx.stroke();
+
+    // Main Yellow Capsule Body
+    ctx.fillStyle = '#facc15'; // Bright cheerful yellow
+    ctx.strokeStyle = '#ca8a04';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.roundRect(-bw / 2, -bh / 2, bw, bh, bw / 2);
+    ctx.fill();
+    ctx.stroke();
+
+    // Outfit / Overalls
+    ctx.fillStyle = charConfig.outfitColor;
+    ctx.beginPath();
+    ctx.roundRect(-bw / 2, bh * 0.05, bw, bh * 0.45, [0, 0, bw / 2, bw / 2]);
+    ctx.fill();
+    // Straps
+    if (charConfig.outfit === 'overalls' || charConfig.outfit === 'chef') {
+        ctx.fillRect(-bw * 0.32, -bh * 0.08, 7, bh * 0.18);
+        ctx.fillRect(bw * 0.18, -bh * 0.08, 7, bh * 0.18);
+        // Front Pocket
+        ctx.fillStyle = 'rgba(255,255,255,0.25)';
+        ctx.beginPath();
+        ctx.roundRect(-bw * 0.2, bh * 0.15, bw * 0.4, bh * 0.18, 4);
+        ctx.fill();
+    }
+
+    // Hair (if no hat covering it)
+    if (charConfig.hat === 'none') {
+        ctx.strokeStyle = '#1e293b';
+        ctx.fillStyle = '#16a34a';
+        ctx.lineWidth = 2.5;
+        if (charConfig.hair === 'sprout') {
+            ctx.beginPath();
+            ctx.moveTo(0, -bh / 2);
+            ctx.quadraticCurveTo(0, -bh / 2 - 12, 10, -bh / 2 - 14);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.ellipse(12, -bh / 2 - 14, 7, 4, -0.3, 0, Math.PI * 2);
+            ctx.fill();
+        } else if (charConfig.hair === 'spiky') {
+            ctx.beginPath();
+            ctx.moveTo(-10, -bh / 2);
+            ctx.lineTo(-6, -bh / 2 - 12);
+            ctx.lineTo(0, -bh / 2 - 4);
+            ctx.lineTo(6, -bh / 2 - 14);
+            ctx.lineTo(10, -bh / 2);
+            ctx.stroke();
+        } else if (charConfig.hair === 'curly') {
+            ctx.fillStyle = '#451a03';
+            ctx.beginPath();
+            ctx.arc(-6, -bh / 2 - 3, 6, 0, Math.PI * 2);
+            ctx.arc(4, -bh / 2 - 5, 7, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    // Eyes & Glasses
+    const eyeY = -bh * 0.18;
+    if (charConfig.eyes === 'one') {
+        // Goggle strap
+        if (charConfig.glasses !== 'none') {
+            ctx.fillStyle = '#334155';
+            ctx.fillRect(-bw / 2, eyeY - 4, bw, 8);
+        }
+        ctx.fillStyle = '#ffffff';
+        ctx.strokeStyle = charConfig.glasses !== 'none' ? '#94a3b8' : '#1e293b';
+        ctx.lineWidth = charConfig.glasses !== 'none' ? 4 : 2;
+        ctx.beginPath();
+        ctx.arc(2, eyeY, 13, 0, Math.PI * 2);
+        ctx.fill(); ctx.stroke();
+        // Pupil
+        ctx.fillStyle = '#451a03';
+        ctx.beginPath();
+        ctx.arc(4, eyeY, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(6, eyeY - 2, 2, 0, Math.PI * 2);
+        ctx.fill();
+    } else {
+        if (charConfig.glasses !== 'none') {
+            ctx.fillStyle = '#334155';
+            ctx.fillRect(-bw / 2, eyeY - 3, bw, 6);
+        }
+        [-8, 10].forEach(ex => {
+            ctx.fillStyle = '#ffffff';
+            ctx.strokeStyle = charConfig.glasses === 'star' ? '#ec4899' : (charConfig.glasses !== 'none' ? '#94a3b8' : '#1e293b');
+            ctx.lineWidth = charConfig.glasses !== 'none' ? 3.5 : 1.8;
+            ctx.beginPath();
+            ctx.arc(ex, eyeY, 9, 0, Math.PI * 2);
+            ctx.fill(); ctx.stroke();
+
+            if (charConfig.eyes === 'happy') {
+                ctx.strokeStyle = '#1e293b';
+                ctx.lineWidth = 2.5;
+                ctx.beginPath();
+                ctx.arc(ex, eyeY + 2, 5, Math.PI, 0);
+                ctx.stroke();
+            } else {
+                ctx.fillStyle = '#451a03';
+                ctx.beginPath();
+                ctx.arc(ex + 1.5, eyeY, 3.8, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.arc(ex + 3, eyeY - 1.5, 1.5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        });
+    }
+
+    // Mouth Expression
+    const mouthY = -bh * 0.01;
+    ctx.strokeStyle = '#78350f';
+    ctx.fillStyle = '#991b1b';
+    ctx.lineWidth = 2.2;
+    if (charConfig.mouth === 'smile') {
+        ctx.beginPath();
+        ctx.arc(2, mouthY, 8, 0.1 * Math.PI, 0.9 * Math.PI);
+        ctx.stroke();
+    } else if (charConfig.mouth === 'cheery') {
+        ctx.beginPath();
+        ctx.arc(2, mouthY, 8, 0, Math.PI);
+        ctx.fill(); ctx.stroke();
+    } else if (charConfig.mouth === 'o') {
+        ctx.beginPath();
+        ctx.arc(2, mouthY + 3, 5, 0, Math.PI * 2);
+        ctx.fill();
+    } else if (charConfig.mouth === 'tongue') {
+        ctx.beginPath();
+        ctx.arc(2, mouthY, 8, 0.1 * Math.PI, 0.9 * Math.PI);
+        ctx.stroke();
+        ctx.fillStyle = '#f43f5e';
+        ctx.beginPath();
+        ctx.arc(3, mouthY + 7, 4, 0, Math.PI);
+        ctx.fill();
+    }
+
+    // Hats
+    if (charConfig.hat === 'chef') {
+        ctx.fillStyle = '#ffffff';
+        ctx.strokeStyle = '#cbd5e1';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.roundRect(-14, -bh / 2 - 14, 28, 16, 6);
+        ctx.arc(-8, -bh / 2 - 16, 8, 0, Math.PI * 2);
+        ctx.arc(0, -bh / 2 - 19, 9, 0, Math.PI * 2);
+        ctx.arc(8, -bh / 2 - 16, 8, 0, Math.PI * 2);
+        ctx.fill(); ctx.stroke();
+    } else if (charConfig.hat === 'safari') {
+        ctx.fillStyle = '#d97706';
+        ctx.beginPath();
+        ctx.ellipse(0, -bh / 2 + 2, 24, 6, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(0, -bh / 2 + 2, 13, Math.PI, 0);
+        ctx.fill();
+    } else if (charConfig.hat === 'crown') {
+        ctx.fillStyle = '#facc15';
+        ctx.strokeStyle = '#b45309';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(-12, -bh / 2 + 2);
+        ctx.lineTo(-14, -bh / 2 - 12);
+        ctx.lineTo(-5, -bh / 2 - 4);
+        ctx.lineTo(0, -bh / 2 - 15);
+        ctx.lineTo(5, -bh / 2 - 4);
+        ctx.lineTo(14, -bh / 2 - 12);
+        ctx.lineTo(12, -bh / 2 + 2);
+        ctx.closePath();
+        ctx.fill(); ctx.stroke();
+    }
+
+    // Swimming Scuba Mask Bubbles in World 2
+    if (animState.isSwimming) {
+        ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(18, -14 - ((animState.time * 25) % 20), 4, 0, Math.PI * 2);
+        ctx.stroke();
+    }
+
+    ctx.restore();
+}
+
+/**
+ * ============================================================================
+ * 4. 2D PLATFORMER & UNDERWATER PHYSICS ENGINE
+ * ============================================================================
+ */
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    if (document.getElementById('previewCanvas')) {
+        renderPreviewCharacter();
+    }
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+// Player Physics Object
+const player = {
+    x: 100,
+    y: 300,
+    w: 54,
+    h: 68,
+    vx: 0,
+    vy: 0,
+    speed: 6.2,
+    jumpPower: -14.5,
+    grounded: false,
+    facing: 1,
+    time: 0,
+    safeX: 100,
+    safeY: 300
+};
+
+// Keyboard & Touch Input State
+const keys = { left: false, right: false, up: false, down: false };
+
+window.addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+    if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = true;
+    if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = true;
+    if (e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'Space') {
+        keys.up = true;
+        if (['world1', 'world2', 'world3'].includes(gameState.screen)) e.preventDefault();
+    }
+    if (e.code === 'ArrowDown' || e.code === 'KeyS') keys.down = true;
+    if (e.code === 'Escape' && ['world1', 'world2', 'world3'].includes(gameState.screen)) {
+        togglePause();
+    }
+    if (e.code === 'Enter' || e.code === 'KeyE') {
+        triggerNearbyInteraction();
+    }
+});
+
+window.addEventListener('keyup', (e) => {
+    if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = false;
+    if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = false;
+    if (e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'Space') keys.up = false;
+    if (e.code === 'ArrowDown' || e.code === 'KeyS') keys.down = false;
+});
+
+// Bind Touch Controls cleanly
+function bindTouchBtn(id, keyName) {
+    const btn = document.getElementById(id);
+    const start = (e) => { e.preventDefault(); keys[keyName] = true; };
+    const end = (e) => { e.preventDefault(); keys[keyName] = false; };
+    btn.addEventListener('touchstart', start, { passive: false });
+    btn.addEventListener('touchend', end, { passive: false });
+    btn.addEventListener('mousedown', start);
+    btn.addEventListener('mouseup', end);
+    btn.addEventListener('mouseleave', end);
+}
+bindTouchBtn('btnLeft', 'left');
+bindTouchBtn('btnRight', 'right');
+bindTouchBtn('btnUp', 'up');
+bindTouchBtn('btnDown', 'down');
+document.getElementById('btnInteract').addEventListener('click', triggerNearbyInteraction);
+
+// World Entities
+let cameraX = 0;
+let worldPlatforms = [];
+let worldCoins = [];
+let worldInteractables = [];
+let worldHazards = [];
+let activeInteractable = null;
+
+function setupWorld1() {
+    const groundY = canvas.height - 90;
+    player.x = 120; player.y = groundY - player.h;
+    player.vx = 0; player.vy = 0;
+    player.safeX = player.x; player.safeY = player.y;
+    cameraX = 0;
+
+    // Long Side-Scrolling Jungle Platformer (4400px wide)
+    worldPlatforms = [
+        { x: -100, y: groundY, w: 950, h: 120, type: 'ground' },
+        { x: 320, y: groundY - 100, w: 140, h: 24, type: 'wood' },
+        { x: 540, y: groundY - 170, w: 180, h: 30, type: 'checkpoint', cpIndex: 0 }, // CP 1
+        // Gap 1
+        { x: 960, y: groundY, w: 750, h: 120, type: 'ground' },
+        { x: 1120, y: groundY - 90, w: 130, h: 24, type: 'wood' },
+        { x: 1340, y: groundY - 160, w: 180, h: 30, type: 'checkpoint', cpIndex: 1 }, // CP 2
+        // Gap 2 with stepping stone
+        { x: 1790, y: groundY - 60, w: 120, h: 24, type: 'wood' },
+        { x: 1990, y: groundY, w: 800, h: 120, type: 'ground' },
+        { x: 2220, y: groundY - 130, w: 180, h: 30, type: 'checkpoint', cpIndex: 2 }, // CP 3
+        // Gap 3
+        { x: 2890, y: groundY, w: 850, h: 120, type: 'ground' },
+        { x: 3020, y: groundY - 100, w: 140, h: 24, type: 'wood' },
+        { x: 3230, y: groundY - 175, w: 180, h: 30, type: 'checkpoint', cpIndex: 3 }, // CP 4
+        { x: 3520, y: groundY - 110, w: 180, h: 30, type: 'checkpoint', cpIndex: 4 }, // CP 5
+        // Final Gate Area
+        { x: 3820, y: groundY, w: 750, h: 120, type: 'ground' }
+    ];
+
+    // Harmless bouncy mud puddles / rolling coconuts
+    worldHazards = [
+        { x: 1220, y: groundY - 26, w: 45, h: 26, type: 'bush', baseX: 1220, range: 80, speed: 1.8 },
+        { x: 2480, y: groundY - 26, w: 45, h: 26, type: 'bush', baseX: 2480, range: 110, speed: 2.2 },
+        { x: 3350, y: groundY - 26, w: 45, h: 26, type: 'bush', baseX: 3350, range: 90, speed: 2.0 }
+    ];
+
+    // Coins & Stars
+    worldCoins = [];
+    for (let i = 0; i < 28; i++) {
+        worldCoins.push({
+            x: 240 + i * 140,
+            y: groundY - 130 - (i % 3) * 55,
+            collected: false,
+            isStar: i % 5 === 4
+        });
+    }
+
+    // 5 Reading Checkpoints + Final Ancient Gate
+    worldInteractables = [
+        { x: 605, y: groundY - 235, w: 50, h: 65, type: 'reading_cp', index: 0, label: '📖 Read 1' },
+        { x: 1405, y: groundY - 225, w: 50, h: 65, type: 'reading_cp', index: 1, label: '📖 Read 2' },
+        { x: 2285, y: groundY - 195, w: 50, h: 65, type: 'reading_cp', index: 2, label: '📖 Read 3' },
+        { x: 3295, y: groundY - 240, w: 50, h: 65, type: 'reading_cp', index: 3, label: '📖 Read 4' },
+        { x: 3585, y: groundY - 175, w: 50, h: 65, type: 'reading_cp', index: 4, label: '📖 Read 5' },
+        { x: 4220, y: groundY - 170, w: 90, h: 170, type: 'ancient_gate', label: '🏛️ Ancient Gate' }
+    ];
+}
+
+function setupWorld2() {
+    player.x = 120; player.y = canvas.height * 0.45;
+    player.vx = 0; player.vy = 0;
+    player.safeX = 120; player.safeY = canvas.height * 0.45;
+    cameraX = 0;
+    worldPlatforms = []; // Free swimming!
+
+    // 5 Hidden Audio Shells scattered across the Ocean (each holds 1 Crossword Clue)
+    const shellPositions = [
+        { x: 420,  y: Math.max(130, canvas.height * 0.25) },
+        { x: 960,  y: Math.max(220, canvas.height * 0.65) },
+        { x: 1520, y: Math.max(140, canvas.height * 0.30) },
+        { x: 2080, y: Math.max(230, canvas.height * 0.68) },
+        { x: 2620, y: Math.max(150, canvas.height * 0.35) }
+    ];
+
+    worldInteractables = CROSSWORD_DATA.clues.map((clue, idx) => ({
+        x: shellPositions[idx].x,
+        y: shellPositions[idx].y,
+        w: 60,
+        h: 60,
+        type: 'audio_shell',
+        index: idx,
+        label: `🐚 Clue ${clue.num} ${clue.dir}`
+    }));
+
+    // Underwater Crossword Shrine at the end
+    worldInteractables.push({
+        x: 3120,
+        y: canvas.height * 0.45,
+        w: 96,
+        h: 96,
+        type: 'crossword_shrine',
+        label: '🧩 Ocean Crossword'
+    });
+
+    // Friendly Pufferfish & Jellyfish (gentle bump back to safe checkpoint)
+    worldHazards = [];
+    for (let i = 0; i < 6; i++) {
+        worldHazards.push({
+            x: 680 + i * 420,
+            y: 160 + (i % 3) * 135,
+            w: 48,
+            h: 48,
+            type: i % 2 === 0 ? 'jellyfish' : 'puffer',
+            baseY: 160 + (i % 3) * 135,
+            range: 90,
+            speed: 0.03 + (i % 3) * 0.01
+        });
+    }
+
+    // Underwater Pearls & Stars
+    worldCoins = [];
+    for (let i = 0; i < 22; i++) {
+        worldCoins.push({
+            x: 260 + i * 130,
+            y: 120 + ((i * 97) % Math.max(200, canvas.height - 240)),
+            collected: false,
+            isStar: i % 5 === 3
+        });
+    }
+}
+
+function setupWorld3() {
+    const groundY = canvas.height - 90;
+    player.x = 120; player.y = groundY - player.h;
+    player.vx = 0; player.vy = 0;
+    player.safeX = player.x; player.safeY = player.y;
+    cameraX = 0;
+
+    // Town street ground
+    worldPlatforms = [
+        { x: -100, y: groundY, w: 3200, h: 120, type: 'town_road' }
+    ];
+
+    // Oncoming cartoon cars that move toward the character's direction
+    worldHazards = [
+        { x: 520,  y: groundY - 38, w: 68, h: 38, type: 'car', emoji: '🚗', minX: 220,  maxX: 660,  speed: 2.8 },
+        { x: 1180, y: groundY - 38, w: 68, h: 38, type: 'car', emoji: '🚕', minX: 880,  maxX: 1340, speed: 3.2 },
+        { x: 1850, y: groundY - 38, w: 68, h: 38, type: 'car', emoji: '🚙', minX: 1560, maxX: 2020, speed: 3.5 },
+        { x: 2450, y: groundY - 38, w: 68, h: 38, type: 'car', emoji: '🚐', minX: 2220, maxX: 2560, speed: 3.1 }
+    ];
+
+    worldCoins = [];
+    for (let i = 0; i < 20; i++) {
+        worldCoins.push({
+            x: 240 + i * 130,
+            y: groundY - 95 - (i % 2) * 35,
+            collected: false,
+            isStar: i % 4 === 2
+        });
+    }
+
+    // 3 Helper Characters located inside their own cosy houses + 1 Sentence Creator Machine
+    worldInteractables = [
+        { x: 740,  y: groundY - 125, w: 120, h: 125, type: 'dialogue_station', index: 0, label: "🏠 Mia & Leo's House", presetIdx: 1, houseColor: '#fb7185' },
+        { x: 1420, y: groundY - 125, w: 120, h: 125, type: 'dialogue_station', index: 1, label: "🏡 Chef Pip & Lulu's House", presetIdx: 0, houseColor: '#38bdf8' },
+        { x: 2100, y: groundY - 125, w: 120, h: 125, type: 'dialogue_station', index: 2, label: "🏘️ Sam & Amina's House", presetIdx: 2, houseColor: '#34d399' },
+        { x: 2660, y: groundY - 140, w: 110, h: 140, type: 'sentence_machine', label: '✍️ Word Machine' }
+    ];
+}
+
+function updatePhysics() {
+    player.time += 0.016;
+    const isSwimming = gameState.screen === 'world2';
+    const maxWorldX = gameState.screen === 'world1' ? 4400 : (gameState.screen === 'world2' ? 3400 : 2900);
+
+    // Horizontal movement
+    if (keys.left) {
+        player.vx = -player.speed;
+        player.facing = -1;
+    } else if (keys.right) {
+        player.vx = player.speed;
+        player.facing = 1;
+    } else {
+        player.vx *= 0.8;
+        if (Math.abs(player.vx) < 0.1) player.vx = 0;
+    }
+
+    if (isSwimming) {
+        // 4-Directional Underwater Swimming
+        if (keys.up) {
+            player.vy = -player.speed * 0.85;
+            if (Math.random() < 0.12) playSFX('swim');
+        } else if (keys.down) {
+            player.vy = player.speed * 0.85;
+        } else {
+            player.vy *= 0.88;
+        }
+        player.x += player.vx;
+        player.y += player.vy;
+        player.y = Math.max(75, Math.min(canvas.height - player.h - 45, player.y));
+        player.grounded = false;
+    } else {
+        // Platformer Gravity & Jumping
+        if (keys.up && player.grounded) {
+            player.vy = player.jumpPower;
+            player.grounded = false;
+            playSFX('jump');
+        }
+        player.vy += 0.65; // Gravity
+        player.x += player.vx;
+        player.y += player.vy;
+
+        // Platform collisions
+        player.grounded = false;
+        for (const p of worldPlatforms) {
+            if (
+                player.vy >= 0 &&
+                player.x + player.w * 0.7 > p.x &&
+                player.x + player.w * 0.3 < p.x + p.w &&
+                player.y + player.h >= p.y &&
+                player.y + player.h - player.vy <= p.y + 20
+            ) {
+                player.y = p.y - player.h;
+                player.vy = 0;
+                player.grounded = true;
+            }
+        }
+
+        // Pitfall rescue in World 1
+        if (player.y > canvas.height + 60) {
+            playSFX('wrong');
+            showToast("🌴 Oops! Back to safe ground!");
+            player.x = player.safeX;
+            player.y = player.safeY;
+            player.vx = 0;
+            player.vy = 0;
+        }
+    }
+
+    // Clamp X inside world boundaries
+    player.x = Math.max(20, Math.min(maxWorldX - player.w, player.x));
+
+    // Smooth Camera Follow
+    const targetCam = player.x - canvas.width * 0.35;
+    cameraX += (Math.max(0, Math.min(maxWorldX - canvas.width + 200, targetCam)) - cameraX) * 0.12;
+
+    // Collect Bananas & Stars
+    for (const c of worldCoins) {
+        if (!c.collected && Math.hypot((player.x + player.w / 2) - c.x, (player.y + player.h / 2) - c.y) < 42) {
+            c.collected = true;
+            playSFX('coin');
+            if (c.isStar) {
+                gameState.stars += 1;
+                showToast("⭐ Star Collected! +1 Star");
+            } else {
+                gameState.coins += 10;
+            }
+            updateHUD();
+        }
+    }
+
+    // Hazards (Gentle cartoon bump)
+    for (const h of worldHazards) {
+        if (h.type === 'bush') {
+            h.x = h.baseX + Math.sin(player.time * h.speed) * h.range;
+        } else if (h.type === 'car') {
+            h.x -= h.speed;
+            if (h.x < h.minX) h.x = h.maxX;
+        } else {
+            h.y = h.baseY + Math.sin(player.time * 25 * h.speed) * h.range;
+        }
+        if (Math.hypot((player.x + player.w / 2) - (h.x + h.w / 2), (player.y + player.h / 2) - (h.y + h.h / 2)) < 42) {
+            playSFX('wrong');
+            const msg = isSwimming
+                ? "🐠 Boop! Watch out for sea friends!"
+                : (h.type === 'car' ? "🚗 Beep-beep! Jump over the oncoming cars!" : "🥥 Boing! Watch out for rolling coconuts!");
+            showToast(msg);
+            player.x = player.safeX;
+            player.y = player.safeY;
+            player.vx = 0; player.vy = 0;
+        }
+    }
+
+    // Check Proximity to Interactive Checkpoints/Stations
+    activeInteractable = null;
+    for (const item of worldInteractables) {
+        const dist = Math.hypot((player.x + player.w / 2) - (item.x + item.w / 2), (player.y + player.h / 2) - (item.y + item.h / 2));
+        if (dist < 75) {
+            activeInteractable = item;
+            player.safeX = player.x;
+            player.safeY = player.y;
+            break;
+        }
+    }
+
+    const interactBtn = document.getElementById('btnInteract');
+    if (activeInteractable) {
+        interactBtn.classList.remove('hidden');
+    } else {
+        interactBtn.classList.add('hidden');
+    }
+}
+
+function renderScene() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (!['world1', 'world2', 'world3'].includes(gameState.screen)) return;
+
+    ctx.save();
+    // 1. Background Scenery per World
+    if (gameState.screen === 'world1') {
+        const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        grad.addColorStop(0, '#38bdf8');
+        grad.addColorStop(0.6, '#bae6fd');
+        grad.addColorStop(1, '#dcfce7');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Parallax Jungle Hills & Trees
+        for (let i = 0; i < 15; i++) {
+            const tx = i * 380 - (cameraX * 0.4);
+            ctx.fillStyle = '#86efac';
+            ctx.beginPath();
+            ctx.arc(tx, canvas.height - 80, 160, Math.PI, 0);
+            ctx.fill();
+
+            // Palm/Jungle Tree Trunk
+            ctx.fillStyle = '#78350f';
+            ctx.fillRect(tx + 40, canvas.height - 260, 22, 180);
+            ctx.fillStyle = '#16a34a';
+            ctx.beginPath();
+            ctx.arc(tx + 51, canvas.height - 270, 55, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    } else if (gameState.screen === 'world2') {
+        const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        grad.addColorStop(0, '#0284c7');
+        grad.addColorStop(0.5, '#0369a1');
+        grad.addColorStop(1, '#1e3a8a');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Sunbeams & Coral Silhouettes
+        ctx.fillStyle = 'rgba(255,255,255,0.06)';
+        for (let i = 0; i < 10; i++) {
+            const bx = i * 420 - (cameraX * 0.3);
+            ctx.beginPath();
+            ctx.moveTo(bx, 0); ctx.lineTo(bx + 120, 0);
+            ctx.lineTo(bx + 240, canvas.height); ctx.lineTo(bx + 60, canvas.height);
+            ctx.fill();
+        }
+        // Ocean Sand Floor
+        ctx.fillStyle = '#fde68a';
+        ctx.fillRect(0, canvas.height - 45, canvas.width, 45);
+    } else if (gameState.screen === 'world3') {
+        const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        grad.addColorStop(0, '#bae6fd');
+        grad.addColorStop(0.65, '#fef3c7');
+        grad.addColorStop(1, '#fde68a');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Cheerful clouds & town bushes in the background
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+        for (let i = 0; i < 10; i++) {
+            const cx = i * 360 - (cameraX * 0.35);
+            ctx.beginPath();
+            ctx.arc(cx + 80, 110, 32, 0, Math.PI * 2);
+            ctx.arc(cx + 110, 102, 38, 0, Math.PI * 2);
+            ctx.arc(cx + 142, 112, 30, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    // Apply Camera Translation
+    ctx.translate(-cameraX, 0);
+
+    // 2. Platforms
+    for (const p of worldPlatforms) {
+        if (p.type === 'ground') {
+            ctx.fillStyle = '#78350f';
+            ctx.fillRect(p.x, p.y, p.w, p.h);
+            ctx.fillStyle = '#22c55e';
+            ctx.fillRect(p.x, p.y, p.w, 18);
+        } else if (p.type === 'town_road') {
+            ctx.fillStyle = '#334155';
+            ctx.fillRect(p.x, p.y, p.w, p.h);
+            ctx.fillStyle = '#22c55e';
+            ctx.fillRect(p.x, p.y, p.w, 12);
+            // Road dashed markings
+            ctx.fillStyle = '#facc15';
+            for (let rx = p.x + 20; rx < p.x + p.w; rx += 90) {
+                ctx.fillRect(rx, p.y + 42, 48, 8);
+            }
+        } else if (p.type === 'checkpoint') {
+            const done = gameState.world1.checkpointsDone[p.cpIndex];
+            ctx.fillStyle = done ? '#10b981' : '#f59e0b';
+            ctx.beginPath();
+            ctx.roundRect(p.x, p.y, p.w, p.h, 10);
+            ctx.fill();
+        } else {
+            ctx.fillStyle = '#b45309';
+            ctx.beginPath();
+            ctx.roundRect(p.x, p.y, p.w, p.h, 8);
+            ctx.fill();
+        }
+    }
+
+    // 3. Collectibles (Bananas & Stars)
+    ctx.font = '26px Fredoka, sans-serif';
+    ctx.textAlign = 'center';
+    for (const c of worldCoins) {
+        if (!c.collected) {
+            const bob = Math.sin(player.time * 4 + c.x) * 5;
+            ctx.fillText(c.isStar ? '⭐' : '🍌', c.x, c.y + bob);
+        }
+    }
+
+    // 4. Hazards
+    ctx.font = '36px sans-serif';
+    for (const h of worldHazards) {
+        if (h.type === 'car') {
+            ctx.font = '44px sans-serif';
+            ctx.fillText(h.emoji || '🚗', h.x + h.w / 2, h.y + h.h * 0.85);
+            ctx.font = '36px sans-serif';
+        } else {
+            const emoji = h.type === 'bush' ? '🥥' : (h.type === 'jellyfish' ? '🪼' : '🐡');
+            ctx.fillText(emoji, h.x + h.w / 2, h.y + h.h * 0.8);
+        }
+    }
+
+    // 5. Interactables (Checkpoints, Shells, Gates, Houses, Machines)
+    for (const item of worldInteractables) {
+        const isDone = item.type === 'reading_cp' ? gameState.world1.checkpointsDone[item.index]
+                     : item.type === 'ancient_gate' ? gameState.world1.gateUnlocked
+                     : item.type === 'audio_shell' ? gameState.world2.shellsDone[item.index]
+                     : item.type === 'crossword_shrine' ? gameState.world2.crosswordDone
+                     : item.type === 'dialogue_station' ? gameState.world3.dialoguesDone[item.index]
+                     : item.type === 'sentence_machine' ? gameState.world3.completed
+                     : false;
+
+        // Draw Object Box/Icon or Helper Character inside their House
+        if (item.type === 'dialogue_station') {
+            const hx = item.x;
+            const hy = item.y;
+            const hw = item.w;
+            const hh = item.h;
+
+            // House Walls
+            ctx.fillStyle = item.houseColor || '#fb7185';
+            ctx.strokeStyle = '#1e293b';
+            ctx.lineWidth = 3.5;
+            ctx.beginPath();
+            ctx.roundRect(hx + 8, hy + 38, hw - 16, hh - 38, [6, 6, 0, 0]);
+            ctx.fill(); ctx.stroke();
+
+            // Pitched Roof
+            ctx.fillStyle = '#b45309';
+            ctx.beginPath();
+            ctx.moveTo(hx - 4, hy + 42);
+            ctx.lineTo(hx + hw / 2, hy + 4);
+            ctx.lineTo(hx + hw + 4, hy + 42);
+            ctx.closePath();
+            ctx.fill(); ctx.stroke();
+
+            // Open Doorway / Window showing the Helper Character inside
+            ctx.fillStyle = '#fef9c3';
+            ctx.beginPath();
+            ctx.roundRect(hx + 24, hy + 50, hw - 48, hh - 50, [22, 22, 0, 0]);
+            ctx.fill(); ctx.stroke();
+
+            const npcConfig = CHARACTER_PRESETS[item.presetIdx || 0];
+            drawCharacter(ctx, hx + hw / 2 - 22, hy + 64, 44, 56, npcConfig, {
+                facing: -1,
+                time: player.time + item.index,
+                vx: 0,
+                grounded: true,
+                isSwimming: false
+            });
+
+            // Speech bubble badge above the house roof
+            ctx.fillStyle = isDone ? '#10b981' : '#ffffff';
+            ctx.strokeStyle = isDone ? '#047857' : '#f59e0b';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.roundRect(hx + hw / 2 - 18, hy - 22, 36, 26, 10);
+            ctx.fill(); ctx.stroke();
+            ctx.font = '16px sans-serif';
+            ctx.fillText(isDone ? '✅' : '💬', hx + hw / 2, hy - 3);
+        } else {
+            ctx.fillStyle = isDone ? '#10b981' : '#ffffff';
+            ctx.strokeStyle = isDone ? '#047857' : '#f59e0b';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.roundRect(item.x, item.y, item.w, item.h, 16);
+            ctx.fill(); ctx.stroke();
+
+            ctx.font = '32px sans-serif';
+            const icon = item.type === 'reading_cp' ? (isDone ? '✅' : '📖')
+                       : item.type === 'ancient_gate' ? (isDone ? '🔓' : '🏛️')
+                       : item.type === 'audio_shell' ? (isDone ? '✨' : '🐚')
+                       : item.type === 'crossword_shrine' ? '🧩'
+                       : '🏭';
+            ctx.fillText(icon, item.x + item.w / 2, item.y + item.h * 0.62);
+        }
+
+        // Floating label
+        const labelOffset = item.type === 'dialogue_station' ? -32 : -10;
+        ctx.fillStyle = '#0f172a';
+        ctx.font = 'bold 13px Nunito, sans-serif';
+        ctx.fillText(item.label, item.x + item.w / 2, item.y + labelOffset);
+
+        if (activeInteractable === item) {
+            ctx.fillStyle = '#facc15';
+            ctx.beginPath();
+            ctx.roundRect(item.x + item.w / 2 - 55, item.y + labelOffset - 34, 110, 24, 12);
+            ctx.fill();
+            ctx.fillStyle = '#451a03';
+            ctx.font = '800 12px Nunito, sans-serif';
+            ctx.fillText('PRESS OPEN / ENTER', item.x + item.w / 2, item.y + labelOffset - 18);
+        }
+    }
+
+    // 6. Player Character
+    drawCharacter(ctx, player.x, player.y, player.w, player.h, gameState.character, {
+        facing: player.facing,
+        time: player.time,
+        vx: player.vx,
+        grounded: player.grounded,
+        isSwimming: gameState.screen === 'world2'
+    });
+
+    ctx.restore();
+}
+
+/**
+ * ============================================================================
+ * 6. EDUCATIONAL INTERACTIONS (READING, LISTENING, CROSSWORD, WRITING)
+ * ============================================================================
+ */
+let currentReadingTarget = null;
+let currentShellIndex = 0;
+let currentDialogueIndex = 0;
+let currentTargetWordIdx = 0;
+
+function triggerNearbyInteraction() {
+    if (!activeInteractable || gameState.paused) return;
+    playSFX('click');
+    const item = activeInteractable;
+
+    if (item.type === 'reading_cp') {
+        openReadingModal(READING_CHECKPOINTS[item.index], false);
+    } else if (item.type === 'ancient_gate') {
+        const completedCount = gameState.world1.checkpointsDone.filter(Boolean).length;
+        if (completedCount < 5) {
+            showToast(`🔒 Complete all 5 Reading Checkpoints first! (${completedCount}/5 done)`);
+            playSFX('wrong');
+            return;
+        }
+        openReadingModal(READING_GATE_CHALLENGE, true);
+    } else if (item.type === 'audio_shell') {
+        openShellModal(item.index);
+    } else if (item.type === 'crossword_shrine') {
+        openCrosswordModal();
+    } else if (item.type === 'dialogue_station') {
+        openDialogueModal(item.index);
+    } else if (item.type === 'sentence_machine') {
+        const diagCount = gameState.world3.dialoguesDone.filter(Boolean).length;
+        if (diagCount < 3) {
+            showToast(`💬 Decode all 3 Dialogue Stations first! (${diagCount}/3 done)`);
+            playSFX('wrong');
+            return;
+        }
+        openSentenceModal();
+    }
+}
+
+// --- WORLD 1: READING COMPREHENSION ---
+function openReadingModal(data, isGate) {
+    currentReadingTarget = { data, isGate };
+    document.getElementById('readBadge').textContent = isGate ? "FINAL GATE CHALLENGE" : `Checkpoint ${data.id + 1} of 5`;
+    document.getElementById('readTypeBadge').textContent = data.type;
+    document.getElementById('readTitle').textContent = data.title;
+    document.getElementById('readPassage').textContent = data.passage;
+    document.getElementById('readQuestion').textContent = data.question;
+    document.getElementById('readAnswerInput').value = '';
+    document.getElementById('readFeedback').classList.add('hidden');
+    document.getElementById('readSpeechStatus').textContent = '';
+    openModal('readingModal');
+}
+
+function readPassageAloud() {
+    if (!currentReadingTarget) return;
+    speakText(currentReadingTarget.data.passage + " ... Question: " + currentReadingTarget.data.question, 'readSpeechStatus');
+}
+
+function submitReadingAnswer() {
+    if (!currentReadingTarget) return;
+    const raw = document.getElementById('readAnswerInput').value.trim().toLowerCase();
+    const fb = document.getElementById('readFeedback');
+    fb.classList.remove('hidden');
+
+    if (raw.length < 1) {
+        playSFX('wrong');
+        fb.className = "p-4 rounded-2xl mb-4 font-bold text-base bg-amber-100 text-amber-900 border-2 border-amber-400";
+        fb.textContent = "Please type your answer in the box first!";
+        return;
+    }
+
+    // Flexible keyword/meaning match
+    const matched = currentReadingTarget.data.keywords.some(kw => raw.includes(kw.toLowerCase()));
+    if (matched) {
+        playSFX('correct');
+        fb.className = "p-4 rounded-2xl mb-4 font-bold text-base bg-emerald-100 text-emerald-900 border-2 border-emerald-500";
+        fb.textContent = "🌟 Amazing! You got it! +30 Bananas & New Words Unlocked!";
+        gameState.coins += 30;
+        currentReadingTarget.data.unlockWords.forEach(w => gameState.unlockedWords.add(w));
+        updateHUD();
+
+        setTimeout(() => {
+            stopSpeech();
+            closeModal('readingModal');
+            if (currentReadingTarget.isGate) {
+                gameState.world1.gateUnlocked = true;
+                gameState.world1.completed = true;
+                gameState.world2.unlocked = true;
+                gameState.stars += 3;
+                updateHUD();
+                showWorldCelebration(1, "🍎 Golden Apple of Knowledge", "You conquered The Great Jungle Run and unlocked World 2: Lost Sounds of the Ocean!");
+            } else {
+                gameState.world1.checkpointsDone[currentReadingTarget.data.id] = true;
+                const done = gameState.world1.checkpointsDone.filter(Boolean).length;
+                document.getElementById('hudObjectiveText').textContent = `Jungle Checkpoints: ${done}/5 — Reach the Ancient Gate!`;
+            }
+        }, 1200);
+    } else {
+        playSFX('wrong');
+        fb.className = "p-4 rounded-2xl mb-4 font-bold text-base bg-rose-100 text-rose-900 border-2 border-rose-400";
+        fb.innerHTML = `Not quite! Try again! 💡 <strong>Hint:</strong> ${currentReadingTarget.data.hint}`;
+    }
+}
+
+// --- WORLD 2: LISTENING SHELLS (CROSSWORD CLUES) ---
+function openShellModal(idx) {
+    currentShellIndex = idx;
+    const clue = CROSSWORD_DATA.clues[idx];
+    const wasNew = !gameState.world2.shellsDone[idx];
+    gameState.world2.shellsDone[idx] = true;
+
+    if (wasNew) {
+        playSFX('coin');
+        gameState.coins += 20;
+        updateHUD();
+        const foundCount = gameState.world2.shellsDone.filter(Boolean).length;
+        document.getElementById('hudObjectiveText').textContent = `Crossword Shells Found: ${foundCount}/5 — Swim to all shells & solve the Crossword!`;
+    }
+
+    document.getElementById('shellTitle').textContent = `🐚 Shell #${idx + 1}: Clue ${clue.num} ${clue.dir}`;
+    document.getElementById('shellSubtitle').textContent = `${clue.word.length} letters — Listen carefully to solve ${clue.num} ${clue.dir}!`;
+    document.getElementById('shellTranscript').textContent = `"${clue.audio}"`;
+    document.getElementById('shellTranscript').classList.add('hidden');
+    document.getElementById('shellAudioStatus').textContent = "Press PLAY CLUE to listen!";
+    openModal('listeningModal');
+}
+
+function playShellAudio(isReplay = false) {
+    const clue = CROSSWORD_DATA.clues[currentShellIndex];
+    speakText(clue.audio, 'shellAudioStatus', () => {
+        document.getElementById('shellTranscript').classList.remove('hidden');
+    });
+}
+
+function toggleTranscript() {
+    document.getElementById('shellTranscript').classList.toggle('hidden');
+}
+
+// --- WORLD 2: FUNCTIONAL INTERACTIVE CROSSWORD ---
+let cwShowText = false;
+function openCrosswordModal() {
+    cwShowText = gameState.difficulty === 'easy';
+    document.getElementById('cwFeedback').classList.add('hidden');
+    buildCrosswordUI();
+    openModal('crosswordModal');
+}
+
+function buildCrosswordUI() {
+    const gridEl = document.getElementById('crosswordGrid');
+    gridEl.style.gridTemplateColumns = `repeat(${CROSSWORD_DATA.cols}, minmax(0, 1fr))`;
+    gridEl.innerHTML = '';
+
+    // Map active cells
+    const cellMap = {};
+    CROSSWORD_DATA.clues.forEach(c => {
+        for (let i = 0; i < c.word.length; i++) {
+            const r = c.dir === 'ACROSS' ? c.row : c.row + i;
+            const col = c.dir === 'ACROSS' ? c.col + i : c.col;
+            const key = `${r}_${col}`;
+            if (!cellMap[key]) cellMap[key] = { letter: c.word[i], num: null };
+            if (i === 0) cellMap[key].num = c.num;
+        }
+    });
+
+    for (let r = 0; r < CROSSWORD_DATA.rows; r++) {
+        for (let col = 0; col < CROSSWORD_DATA.cols; col++) {
+            const key = `${r}_${col}`;
+            const wrapper = document.createElement('div');
+            wrapper.className = 'relative';
+            if (cellMap[key]) {
+                if (cellMap[key].num) {
+                    const badge = document.createElement('span');
+                    badge.className = 'absolute top-0.5 left-1 text-[10px] font-black text-teal-800 pointer-events-none';
+                    badge.textContent = cellMap[key].num;
+                    wrapper.appendChild(badge);
+                }
+                const inp = document.createElement('input');
+                inp.type = 'text';
+                inp.maxLength = 1;
+                inp.dataset.target = cellMap[key].letter;
+                inp.id = `cw_cell_${key}`;
+                inp.className = 'cw-cell bg-white border-2 border-teal-400 text-slate-900 focus:bg-amber-100 focus:border-amber-500 outline-none';
+                // Prefill first letter in Easy mode
+                if (gameState.difficulty === 'easy' && cellMap[key].num) {
+                    inp.value = cellMap[key].letter;
+                }
+                inp.addEventListener('input', (e) => {
+                    e.target.value = e.target.value.replace(/[^a-zA-Z]/g, '').toUpperCase();
+                });
+                wrapper.appendChild(inp);
+            } else {
+                const blank = document.createElement('div');
+                blank.className = 'cw-cell bg-teal-950/60';
+                wrapper.appendChild(blank);
+            }
+            gridEl.appendChild(wrapper);
+        }
+    }
+
+    // Clues List (shows found shells vs locked shells)
+    const cluesEl = document.getElementById('cwCluesList');
+    cluesEl.innerHTML = '';
+    CROSSWORD_DATA.clues.forEach((c, idx) => {
+        const found = gameState.world2.shellsDone[idx];
+        const row = document.createElement('div');
+        row.className = `p-2.5 rounded-xl border flex items-start gap-2.5 ${found ? 'bg-slate-50 border-slate-200' : 'bg-amber-50 border-amber-200 opacity-85'}`;
+        if (found) {
+            row.innerHTML = `
+                <button onclick="speakText('${c.audio.replace(/'/g, "\\'")}', 'cwAudioStatus')" class="btn-3d bg-sky-500 text-white font-bold px-2.5 py-1 rounded-lg text-xs shrink-0">
+                    🔊 ${c.num} ${c.dir}
+                </button>
+                <div class="text-xs font-bold text-slate-700">
+                    <span class="text-teal-800">${c.num} ${c.dir} (${c.word.length} letters)</span>
+                    <p class="cw-clue-text ${cwShowText ? '' : 'hidden'} mt-1 text-slate-600">${c.audio}</p>
+                </div>
+            `;
+        } else {
+            row.innerHTML = `
+                <span class="bg-amber-200 text-amber-900 font-bold px-2.5 py-1 rounded-lg text-xs shrink-0">
+                    🔒 ${c.num} ${c.dir}
+                </span>
+                <div class="text-xs font-bold text-amber-900">
+                    <span>Shell #${idx + 1} not found yet! (${c.word.length} letters)</span>
+                    <p class="mt-0.5 text-amber-700">Swim around the ocean to find Shell #${idx + 1} and unlock this audio clue!</p>
+                </div>
+            `;
+        }
+        cluesEl.appendChild(row);
+    });
+}
+
+function toggleCwTranscripts() {
+    cwShowText = !cwShowText;
+    document.querySelectorAll('.cw-clue-text').forEach(el => el.classList.toggle('hidden', !cwShowText));
+}
+
+function giveCrosswordHint() {
+    const inputs = Array.from(document.querySelectorAll('#crosswordGrid input'));
+    const emptyOrWrong = inputs.find(inp => inp.value.toUpperCase() !== inp.dataset.target);
+    if (emptyOrWrong) {
+        emptyOrWrong.value = emptyOrWrong.dataset.target;
+        emptyOrWrong.classList.add('bg-amber-100');
+        playSFX('coin');
+    }
+}
+
+function checkCrossword() {
+    const inputs = Array.from(document.querySelectorAll('#crosswordGrid input'));
+    let allCorrect = true;
+    inputs.forEach(inp => {
+        if (inp.value.toUpperCase() === inp.dataset.target) {
+            inp.classList.remove('border-rose-500', 'bg-rose-50');
+            inp.classList.add('border-emerald-500', 'bg-emerald-100', 'text-emerald-900');
+        } else {
+            allCorrect = false;
+            inp.classList.add('border-rose-500', 'bg-rose-50');
+        }
+    });
+
+    const fb = document.getElementById('cwFeedback');
+    fb.classList.remove('hidden');
+    if (allCorrect) {
+        playSFX('correct');
+        fb.className = "p-3 rounded-xl font-bold text-sm bg-emerald-100 text-emerald-900 border-2 border-emerald-500";
+        fb.textContent = "🎉 Amazing! Every single word in the Underwater Crossword is correct!";
+        CROSSWORD_DATA.clues.forEach(c => gameState.unlockedWords.add(c.word.toLowerCase()));
+        gameState.world2.crosswordDone = true;
+        gameState.world2.completed = true;
+        gameState.world3.unlocked = true;
+        gameState.stars += 3;
+        gameState.coins += 50;
+        updateHUD();
+
+        setTimeout(() => {
+            stopSpeech();
+            closeModal('crosswordModal');
+            showWorldCelebration(2, "🐚 Crystal Conch of Harmony", "You solved the Ocean Audio Crossword and unlocked World 3: The Secret Message Factory!");
+        }, 1300);
+    } else {
+        playSFX('wrong');
+        fb.className = "p-3 rounded-xl font-bold text-sm bg-rose-100 text-rose-900 border-2 border-rose-400";
+        fb.textContent = "Not quite! Green squares are right; red squares need fixing. Use Hint if you need help!";
+    }
+}
+
+// --- WORLD 3: DIALOGUE DECODER & SENTENCE CREATOR ---
+function openDialogueModal(idx) {
+    currentDialogueIndex = idx;
+    const diag = FACTORY_DIALOGUES[idx];
+    document.getElementById('diagBadge').textContent = `Station ${idx + 1} of 3`;
+    document.getElementById('diagTitle').textContent = diag.title;
+    document.getElementById('diagFeedback').classList.add('hidden');
+
+    const box = document.getElementById('diagBox');
+    box.innerHTML = diag.lines.map(l => `<div><span class="font-black text-amber-700">${l.speaker}:</span> ${l.text}</div>`).join('');
+
+    const qBox = document.getElementById('diagQuestions');
+    qBox.innerHTML = '';
+    diag.matches.forEach((m, mIdx) => {
+        const div = document.createElement('div');
+        div.className = 'bg-amber-50 p-3 rounded-xl border border-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2';
+        const opts = m.options.map(o => `<option value="${o}">${o}</option>`).join('');
+        div.innerHTML = `
+            <span class="font-cartoon font-bold text-lg text-slate-800 underline decoration-amber-500">${m.word}</span>
+            <select id="diag_sel_${mIdx}" class="p-2 rounded-xl border-2 border-slate-300 font-bold text-sm bg-white">
+                <option value="">-- Choose meaning --</option>
+                ${opts}
+            </select>
+        `;
+        qBox.appendChild(div);
+    });
+    openModal('dialogueModal');
+}
+
+function playDialogueAudio() {
+    const diag = FACTORY_DIALOGUES[currentDialogueIndex];
+    const plain = diag.lines.map(l => `${l.speaker} says: ${l.text.replace(/<[^>]*>/g, '')}`).join(' ... ');
+    speakText(plain, 'diagSpeechStatus');
+}
+
+function checkDialogueAnswers() {
+    const diag = FACTORY_DIALOGUES[currentDialogueIndex];
+    let allRight = true;
+    diag.matches.forEach((m, idx) => {
+        const val = document.getElementById(`diag_sel_${idx}`).value;
+        if (val !== m.correct) allRight = false;
+    });
+
+    const fb = document.getElementById('diagFeedback');
+    fb.classList.remove('hidden');
+    if (allRight) {
+        playSFX('correct');
+        fb.className = "p-3 rounded-2xl mb-4 font-bold text-sm bg-emerald-100 text-emerald-900 border-2 border-emerald-500";
+        fb.textContent = "🌟 Brilliant! You decoded all the vocabulary meanings!";
+        diag.matches.forEach(m => gameState.unlockedWords.add(m.word));
+        gameState.world3.dialoguesDone[currentDialogueIndex] = true;
+        gameState.coins += 30;
+        updateHUD();
+        const done = gameState.world3.dialoguesDone.filter(Boolean).length;
+        document.getElementById('hudObjectiveText').textContent = `Dialogues Decoded: ${done}/3 — Visit the Word Machine!`;
+
+        setTimeout(() => {
+            stopSpeech();
+            closeModal('dialogueModal');
+        }, 1100);
+    } else {
+        playSFX('wrong');
+        fb.className = "p-3 rounded-2xl mb-4 font-bold text-sm bg-rose-100 text-rose-900 border-2 border-rose-400";
+        fb.textContent = "Not quite! Read the conversation clues carefully and check each dropdown!";
+    }
+}
+
+function openSentenceModal() {
+    document.getElementById('sentenceFeedback').classList.add('hidden');
+    document.getElementById('sentenceInput').value = '';
+    updateSentenceTargetUI();
+    openModal('sentenceModal');
+}
+
+function updateSentenceTargetUI() {
+    const item = SENTENCE_TARGETS[currentTargetWordIdx % SENTENCE_TARGETS.length];
+    const goal = gameState.difficulty === 'easy' ? 3 : 5;
+    document.getElementById('targetWordDisplay').textContent = item.word;
+    document.getElementById('targetWordHint').textContent = `Meaning: ${item.hint}`;
+    document.getElementById('sentProgress').textContent = `Sentences Built: ${gameState.world3.sentencesDone} / ${goal}`;
+}
+
+function nextTargetWord() {
+    playSFX('click');
+    currentTargetWordIdx = (currentTargetWordIdx + 1) % SENTENCE_TARGETS.length;
+    document.getElementById('sentenceInput').value = '';
+    document.getElementById('sentenceFeedback').classList.add('hidden');
+    updateSentenceTargetUI();
+}
+
+function submitSentence() {
+    const item = SENTENCE_TARGETS[currentTargetWordIdx % SENTENCE_TARGETS.length];
+    const raw = document.getElementById('sentenceInput').value.trim();
+    const lower = raw.toLowerCase();
+    const words = lower.replace(/[^a-z\s]/g, '').split(/\s+/).filter(Boolean);
+    const fb = document.getElementById('sentenceFeedback');
+    fb.classList.remove('hidden');
+
+    // Meaningful Sentence Validation for Year 5 Pupils:
+    // 1. Must include the target word (or close root)
+    // 2. Must be a real multi-word sentence (at least 4 words, not just repeating the word)
+    // 3. Should connect to food/eating/context or form a valid subject-verb structure
+    const hasTarget = words.includes(item.word.toLowerCase()) || lower.includes(item.word.toLowerCase());
+    const uniqueWords = new Set(words);
+
+    if (!hasTarget) {
+        playSFX('wrong');
+        fb.className = "p-3.5 rounded-2xl mb-4 font-bold text-sm bg-rose-100 text-rose-900 border-2 border-rose-400";
+        fb.textContent = `Make sure your sentence includes the word "${item.word}"!`;
+        return;
+    }
+    if (words.length < 4 || uniqueWords.size < 3) {
+        playSFX('wrong');
+        fb.className = "p-3.5 rounded-2xl mb-4 font-bold text-sm bg-amber-100 text-amber-900 border-2 border-amber-400";
+        fb.textContent = `Try writing a longer, complete sentence (at least 4 words) using "${item.word}"!`;
+        return;
+    }
+
+    // Success!
+    playSFX('correct');
+    gameState.world3.sentencesDone += 1;
+    gameState.unlockedWords.add(item.word);
+    gameState.coins += 30;
+    updateHUD();
+    updateSentenceTargetUI();
+
+    const goal = gameState.difficulty === 'easy' ? 3 : 5;
+    fb.className = "p-3.5 rounded-2xl mb-4 font-bold text-sm bg-emerald-100 text-emerald-900 border-2 border-emerald-500";
+    fb.textContent = `🌟 Amazing sentence! "${raw}" — Great job using "${item.word}"!`;
+
+    if (gameState.world3.sentencesDone >= goal && !gameState.world3.completed) {
+        gameState.world3.completed = true;
+        gameState.stars += 4;
+        updateHUD();
+        setTimeout(() => {
+            closeModal('sentenceModal');
+            showWorldCelebration(3, "👑 Crown of Healthy Cooking", "All 3 Magical Treasures are back! The Healthy Kingdom is saved!");
+        }, 1400);
+    } else {
+        setTimeout(() => {
+            nextTargetWord();
+        }, 1400);
+    }
+}
+
+/**
+ * ============================================================================
+ * 7. UI NAVIGATION, CUSTOMISER, STORY INTRO & CELEBRATIONS
+ * ============================================================================
+ */
+function hideAllScreens() {
+    ['mainMenuScreen', 'customiserScreen', 'storyIntroScreen', 'worldMapScreen'].forEach(id => {
+        document.getElementById(id).classList.add('hidden');
+    });
+    document.getElementById('hudBar').classList.add('hidden');
+    document.getElementById('touchControls').classList.add('hidden');
+}
+
+function goToMainMenu() {
+    playSFX('click');
+    stopSpeech();
+    gameState.screen = 'menu';
+    hideAllScreens();
+    document.getElementById('mainMenuScreen').classList.remove('hidden');
+}
+
+// Character Customiser
+function openCustomiser() {
+    playSFX('click');
+    hideAllScreens();
+    document.getElementById('customiserScreen').classList.remove('hidden');
+    buildPresetButtons();
+    syncCustomiserInputs();
+    renderPreviewCharacter();
+}
+
+function closeCustomiser() {
+    goToMainMenu();
+}
+
+function buildPresetButtons() {
+    const container = document.getElementById('presetButtons');
+    container.innerHTML = '';
+    CHARACTER_PRESETS.forEach((p, idx) => {
+        const btn = document.createElement('button');
+        btn.className = `p-2 rounded-xl font-bold text-xs border-2 transition ${gameState.character.preset === idx ? 'bg-purple-600 text-white border-purple-800' : 'bg-white text-slate-700 border-slate-300 hover:bg-purple-50'}`;
+        btn.textContent = p.name.split(' ')[0];
+        btn.onclick = () => {
+            playSFX('click');
+            Object.assign(gameState.character, p, { preset: idx });
+            document.getElementById('presetNameBadge').textContent = p.name;
+            document.getElementById('presetDesc').textContent = p.desc;
+            buildPresetButtons();
+            syncCustomiserInputs();
+            renderPreviewCharacter();
+        };
+        container.appendChild(btn);
+    });
+}
+
+function syncCustomiserInputs() {
+    const c = gameState.character;
+    document.getElementById('custBody').value = c.body;
+    document.getElementById('custEyes').value = c.eyes;
+    document.getElementById('custHair').value = c.hair;
+    document.getElementById('custGlasses').value = c.glasses;
+    document.getElementById('custOutfitColor').value = c.outfitColor;
+    document.getElementById('custOutfit').value = c.outfit;
+    document.getElementById('custHat').value = c.hat;
+    document.getElementById('custMouth').value = c.mouth;
+}
+
+function updateCustomChar() {
+    playSFX('click');
+    gameState.character.body = document.getElementById('custBody').value;
+    gameState.character.eyes = document.getElementById('custEyes').value;
+    gameState.character.hair = document.getElementById('custHair').value;
+    gameState.character.glasses = document.getElementById('custGlasses').value;
+    gameState.character.outfitColor = document.getElementById('custOutfitColor').value;
+    gameState.character.outfit = document.getElementById('custOutfit').value;
+    gameState.character.hat = document.getElementById('custHat').value;
+    gameState.character.mouth = document.getElementById('custMouth').value;
+    renderPreviewCharacter();
+}
+
+function renderPreviewCharacter() {
+    const pCanvas = document.getElementById('previewCanvas');
+    if (!pCanvas) return;
+    const pCtx = pCanvas.getContext('2d');
+    pCtx.clearRect(0, 0, pCanvas.width, pCanvas.height);
+    // Floor shadow
+    pCtx.fillStyle = 'rgba(0,0,0,0.08)';
+    pCtx.beginPath();
+    pCtx.ellipse(100, 185, 45, 10, 0, 0, Math.PI * 2);
+    pCtx.fill();
+    drawCharacter(pCtx, 65, 65, 70, 110, gameState.character, { facing: 1, time: 0.5, vx: 0, grounded: true, isSwimming: false });
+}
+
+// Story Intro Slides
+const STORY_SLIDES = [
+    { icon: "🏰", title: "Welcome to Healthy Kingdom!", text: "Once upon a time, the Healthy Kingdom was full of delicious fruits, crunchy vegetables, and happy little helpers!" },
+    { icon: "🌪️", title: "Oh No! The Treasures Vanished!", text: "A big storm scattered our 3 Magical Food Treasures across the Jungle, the Deep Ocean, and the Secret Factory!" },
+    { icon: "🦸", title: "Your Quest Begins Now!", text: "Use your English Reading, Listening, and Writing superpowers to solve puzzles and save the kingdom!" }
+];
+let currentSlide = 0;
+
+function startStoryIntro() {
+    playSFX('click');
+    const nameInput = document.getElementById('menuStudentName');
+    const chosenName = (nameInput && nameInput.value.trim()) || gameState.studentName || 'Food Explorer';
+    syncStudentName(chosenName);
+    startBackgroundMusic();
+    if (!gameState.adventureStarted) {
+        gameState.adventureStarted = true;
+        gameState.elapsedSeconds = 0;
+        updateTimerDisplay();
+    }
+    currentSlide = 0;
+    hideAllScreens();
+    document.getElementById('storyIntroScreen').classList.remove('hidden');
+    renderStorySlide();
+}
+
+function syncStudentName(val) {
+    gameState.studentName = val.trim();
+    const display = gameState.studentName || 'Food Explorer';
+    const menuInp = document.getElementById('menuStudentName');
+    if (menuInp && menuInp.value !== val) menuInp.value = val;
+    const custInp = document.getElementById('custStudentName');
+    if (custInp && custInp.value !== val) custInp.value = val;
+    const hudName = document.getElementById('hudStudentName');
+    if (hudName) hudName.textContent = display;
+    const mapName = document.getElementById('mapStudentName');
+    if (mapName) mapName.textContent = display;
+}
+
+function renderStorySlide() {
+    const slide = STORY_SLIDES[currentSlide];
+    document.getElementById('storySlideIcon').textContent = slide.icon;
+    document.getElementById('storySlideTitle').textContent = slide.title;
+    document.getElementById('storySlideText').textContent = slide.text;
+    [0, 1, 2].forEach(i => {
+        const dot = document.getElementById(`dot${i}`);
+        if (dot) dot.className = `w-3 h-3 rounded-full ${i === currentSlide ? 'bg-emerald-500' : 'bg-slate-300'}`;
+    });
+    document.getElementById('storyNextBtn').textContent = currentSlide === STORY_SLIDES.length - 1 ? "ENTER MAP! 🗺️" : "NEXT ➔";
+}
+
+function nextStorySlide() {
+    playSFX('click');
+    if (currentSlide < STORY_SLIDES.length - 1) {
+        currentSlide++;
+        renderStorySlide();
+    } else {
+        openWorldMap();
+    }
+}
+
+function openWorldMap() {
+    playSFX('click');
+    stopSpeech();
+    if (!gameState.adventureStarted) {
+        gameState.adventureStarted = true;
+        gameState.elapsedSeconds = 0;
+    }
+    gameState.screen = 'map';
+    gameState.paused = false;
+    hideAllScreens();
+    document.getElementById('worldMapScreen').classList.remove('hidden');
+    updateWorldMapUI();
+    updateTimerDisplay();
+}
+
+function updateWorldMapUI() {
+    const w1Done = gameState.world1.checkpointsDone.filter(Boolean).length;
+    document.getElementById('w1ProgressText').textContent = gameState.world1.completed
+        ? "Completed! Golden Apple Rescued 🍎"
+        : `Checkpoints: ${w1Done} / 5`;
+    if (gameState.world1.completed) {
+        document.getElementById('badgeW1').classList.remove('hidden');
+        document.getElementById('treasureSlot1').classList.remove('opacity-40');
+        document.getElementById('treasureSlot1').classList.add('bg-yellow-200', 'border-2', 'border-yellow-500');
+    }
+
+    const w2Btn = document.getElementById('btnEnterW2');
+    const w2Found = gameState.world2.shellsDone.filter(Boolean).length;
+    if (gameState.world2.unlocked) {
+        w2Btn.disabled = false;
+        w2Btn.textContent = "PLAY WORLD 2 ▶";
+        document.getElementById('w2ProgressText').textContent = gameState.world2.completed
+            ? "Completed! Crystal Conch Rescued 🐚"
+            : `Clue Shells Found: ${w2Found} / 5`;
+    }
+    if (gameState.world2.completed) {
+        document.getElementById('badgeW2').classList.remove('hidden');
+        document.getElementById('treasureSlot2').classList.remove('opacity-40');
+        document.getElementById('treasureSlot2').classList.add('bg-sky-200', 'border-2', 'border-sky-500');
+    }
+
+    const w3Btn = document.getElementById('btnEnterW3');
+    const w3Diag = gameState.world3.dialoguesDone.filter(Boolean).length;
+    if (gameState.world3.unlocked) {
+        w3Btn.disabled = false;
+        w3Btn.textContent = "PLAY WORLD 3 ▶";
+        document.getElementById('w3ProgressText').textContent = gameState.world3.completed
+            ? "Completed! Healthy Crown Rescued 👑"
+            : `Houses Visited: ${w3Diag} / 3`;
+    }
+    if (gameState.world3.completed) {
+        document.getElementById('badgeW3').classList.remove('hidden');
+        document.getElementById('treasureSlot3').classList.remove('opacity-40');
+        document.getElementById('treasureSlot3').classList.add('bg-amber-200', 'border-2', 'border-amber-500');
+        document.getElementById('finalCelebrationBtn').classList.remove('hidden');
+    }
+}
+
+function enterWorld(num) {
+    playSFX('click');
+    stopSpeech();
+    hideAllScreens();
+    gameState.paused = false;
+    document.getElementById('hudBar').classList.remove('hidden');
+    document.getElementById('touchControls').classList.remove('hidden');
+
+    const upBtn = document.getElementById('btnUp');
+    if (num === 1) {
+        gameState.screen = 'world1';
+        document.getElementById('hudWorldBadge').textContent = "World 1: Jungle";
+        const done = gameState.world1.checkpointsDone.filter(Boolean).length;
+        document.getElementById('hudObjectiveText').textContent = `Jungle Checkpoints: ${done}/5 — Reach the Ancient Gate!`;
+        upBtn.textContent = "JUMP";
+        setupWorld1();
+    } else if (num === 2) {
+        gameState.screen = 'world2';
+        document.getElementById('hudWorldBadge').textContent = "World 2: Ocean";
+        const found = gameState.world2.shellsDone.filter(Boolean).length;
+        document.getElementById('hudObjectiveText').textContent = `Crossword Shells Found: ${found}/5 — Swim to all shells & solve the Crossword!`;
+        upBtn.textContent = "SWIM ▲";
+        setupWorld2();
+    } else if (num === 3) {
+        gameState.screen = 'world3';
+        document.getElementById('hudWorldBadge').textContent = "World 3: Town";
+        const diag = gameState.world3.dialoguesDone.filter(Boolean).length;
+        document.getElementById('hudObjectiveText').textContent = `Jump over cars & visit the 3 Helpers' Houses (${diag}/3)!`;
+        upBtn.textContent = "JUMP";
+        setupWorld3();
+    }
+    updateHUD();
+}
+
+function returnToMap() {
+    openWorldMap();
+}
+
+function updateHUD() {
+    document.getElementById('hudCoins').textContent = gameState.coins;
+    document.getElementById('hudStars').textContent = gameState.stars;
+    document.getElementById('hudVocabCount').textContent = gameState.unlockedWords.size;
+    const display = gameState.studentName || 'Food Explorer';
+    const hudName = document.getElementById('hudStudentName');
+    if (hudName) hudName.textContent = display;
+}
+
+function showWorldCelebration(worldNum, treasureTitle, message) {
+    playSFX('treasure');
+    document.getElementById('celebIcon').textContent = worldNum === 1 ? "🍎" : (worldNum === 2 ? "🐚" : "👑");
+    document.getElementById('celebTitle').textContent = `${treasureTitle} Rescued!`;
+    document.getElementById('celebMessage').textContent = message;
+    document.getElementById('celebStats').innerHTML = `
+        <div>🧑‍🎓 Explorer: ${gameState.studentName || 'Food Explorer'}</div>
+        <div>⏱️ Time: ${formatDuration(gameState.elapsedSeconds)}</div>
+        <div>🍌 Bananas: ${gameState.coins}</div>
+        <div>⭐ Stars: ${gameState.stars}</div>
+    `;
+    const primaryBtn = document.getElementById('celebPrimaryBtn');
+    const mapBtn = document.getElementById('celebMapBtn');
+    if (worldNum === 1) {
+        primaryBtn.textContent = "ENTER WORLD 2: OCEAN ▶";
+        primaryBtn.dataset.nextWorld = "2";
+        primaryBtn.className = "btn-3d sm:w-2/3 bg-sky-500 hover:bg-sky-400 text-white font-cartoon font-bold text-lg md:text-xl py-3.5 rounded-2xl border-4 border-sky-700";
+        mapBtn.classList.remove('hidden');
+    } else if (worldNum === 2) {
+        primaryBtn.textContent = "ENTER WORLD 3: TOWN ▶";
+        primaryBtn.dataset.nextWorld = "3";
+        primaryBtn.className = "btn-3d sm:w-2/3 bg-amber-500 hover:bg-amber-400 text-white font-cartoon font-bold text-lg md:text-xl py-3.5 rounded-2xl border-4 border-amber-700";
+        mapBtn.classList.remove('hidden');
+    } else {
+        gameState.adventureFinished = true;
+        primaryBtn.textContent = "🎉 VIEW GRAND VICTORY!";
+        primaryBtn.dataset.nextWorld = "";
+        primaryBtn.className = "btn-3d w-full bg-emerald-500 hover:bg-emerald-400 text-white font-cartoon font-bold text-xl py-3.5 rounded-2xl border-4 border-emerald-700";
+        mapBtn.classList.add('hidden');
+    }
+    openModal('celebrationModal');
+}
+
+function showFinalCelebration() {
+    playSFX('treasure');
+    gameState.adventureFinished = true;
+    const explorer = gameState.studentName || 'Food Explorer';
+    document.getElementById('celebIcon').textContent = "🎉👑🎉";
+    document.getElementById('celebTitle').textContent = "BELLO! EAT IT RIGHT! CHAMPION!";
+    document.getElementById('celebMessage').textContent = `Congratulations, ${explorer}! You completed BELLO! EAT IT RIGHT! and rescued all three magical treasures of the Healthy Kingdom!`;
+    document.getElementById('celebStats').innerHTML = `
+        <div>🧑‍🎓 Explorer: ${explorer}</div>
+        <div>⏱️ Finish Time: ${formatDuration(gameState.elapsedSeconds)}</div>
+        <div>🍌 Total Bananas: ${gameState.coins}</div>
+        <div>⭐ Total Stars: ${gameState.stars}</div>
+    `;
+    const primaryBtn = document.getElementById('celebPrimaryBtn');
+    const mapBtn = document.getElementById('celebMapBtn');
+    primaryBtn.textContent = "BACK TO KINGDOM MAP 🗺️";
+    primaryBtn.dataset.nextWorld = "";
+    primaryBtn.className = "btn-3d w-full bg-emerald-500 hover:bg-emerald-400 text-white font-cartoon font-bold text-xl py-3.5 rounded-2xl border-4 border-emerald-700";
+    mapBtn.classList.add('hidden');
+    openModal('celebrationModal');
+}
+
+function closeCelebrationToMap() {
+    playSFX('click');
+    const primaryBtn = document.getElementById('celebPrimaryBtn');
+    if (primaryBtn) primaryBtn.dataset.nextWorld = "";
+    closeModal('celebrationModal');
+    openWorldMap();
+}
+
+function closeCelebration() {
+    playSFX('click');
+    const primaryBtn = document.getElementById('celebPrimaryBtn');
+    const nextWorld = primaryBtn ? parseInt(primaryBtn.dataset.nextWorld, 10) : NaN;
+    if (primaryBtn) primaryBtn.dataset.nextWorld = "";
+    closeModal('celebrationModal');
+
+    if (!isNaN(nextWorld) && (nextWorld === 2 || nextWorld === 3)) {
+        enterWorld(nextWorld);
+    } else if (gameState.world3.completed && !document.getElementById('celebTitle').textContent.includes("CHAMPION")) {
+        showFinalCelebration();
+    } else {
+        openWorldMap();
+    }
+}
+
+function openModal(id) {
+    if (id === 'vocabModal') renderVocabBook();
+    if (id === 'settingsModal') {
+        const inGame = ['world1', 'world2', 'world3'].includes(gameState.screen);
+        document.getElementById('pauseMapBtn').classList.toggle('hidden', !inGame);
+        updateVoiceSupportBadge();
+    }
+    document.getElementById(id).classList.remove('hidden');
+}
+
+function closeModal(id) {
+    document.getElementById(id).classList.add('hidden');
+}
+
+function togglePause() {
+    playSFX('click');
+    gameState.paused = !gameState.paused;
+    if (gameState.paused) {
+        openModal('settingsModal');
+    } else {
+        closeModal('settingsModal');
+    }
+}
+
+function resumeGame() {
+    playSFX('click');
+    gameState.paused = false;
+    closeModal('settingsModal');
+}
+
+function toggleSound() {
+    gameState.sfxEnabled = !gameState.sfxEnabled;
+    if (gameState.sfxEnabled) playSFX('click');
+    const label = gameState.sfxEnabled ? "🔊 SFX: ON" : "🔇 SFX: OFF";
+    const mBtn = document.getElementById('menuSoundBtn');
+    if (mBtn) mBtn.textContent = label;
+    const sBtn = document.getElementById('setSoundBtn');
+    if (sBtn) {
+        sBtn.textContent = gameState.sfxEnabled ? "ON" : "OFF";
+        sBtn.className = gameState.sfxEnabled ? "bg-emerald-500 text-white font-bold px-4 py-1.5 rounded-xl" : "bg-slate-400 text-white font-bold px-4 py-1.5 rounded-xl";
+    }
+}
+
+function toggleMusic() {
+    gameState.musicEnabled = !gameState.musicEnabled;
+    playSFX('click');
+    const label = gameState.musicEnabled ? "🎵 Music: ON" : "🔇 Music: OFF";
+    const mBtn = document.getElementById('menuMusicBtn');
+    if (mBtn) mBtn.textContent = label;
+    const sBtn = document.getElementById('setMusicBtn');
+    if (sBtn) {
+        sBtn.textContent = gameState.musicEnabled ? "ON" : "OFF";
+        sBtn.className = gameState.musicEnabled ? "bg-emerald-500 text-white font-bold px-4 py-1.5 rounded-xl" : "bg-slate-400 text-white font-bold px-4 py-1.5 rounded-xl";
+    }
+}
+
+function setDifficulty(level) {
+    playSFX('click');
+    gameState.difficulty = level;
+    ['easy', 'normal', 'challenge'].forEach(lvl => {
+        const btn = document.getElementById(`diff${lvl.charAt(0).toUpperCase() + lvl.slice(1)}`);
+        if (!btn) return;
+        btn.className = lvl === level
+            ? "py-2 rounded-xl font-bold border-2 border-emerald-500 bg-emerald-100 text-emerald-900"
+            : "py-2 rounded-xl font-bold border-2 border-slate-300";
+    });
+}
+
+function renderVocabBook() {
+    const grid = document.getElementById('vocabGrid');
+    if (!grid) return;
+    grid.innerHTML = '';
+    VOCABULARY_BANK.forEach(item => {
+        const unlocked = gameState.unlockedWords.has(item.word);
+        const card = document.createElement('button');
+        card.className = `p-3 rounded-2xl border-2 text-left transition flex flex-col justify-between ${
+            unlocked
+                ? 'bg-sky-50 hover:bg-sky-100 border-sky-300 text-slate-800'
+                : 'bg-slate-100 border-slate-200 text-slate-400 opacity-75'
+        }`;
+        card.onclick = () => {
+            playSFX('click');
+            speakText(`${item.word}. ${item.def}`);
+        };
+        card.innerHTML = `
+            <div class="flex justify-between items-center mb-1">
+                <span class="text-2xl">${item.icon}</span>
+                <span class="text-[10px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-white border border-slate-200">${item.cat}</span>
+            </div>
+            <div class="font-cartoon font-bold text-base capitalize">${item.word} ${unlocked ? '🔊' : '🔒'}</div>
+            <p class="text-[11px] font-semibold mt-0.5 leading-snug">${item.def}</p>
+        `;
+        grid.appendChild(card);
+    });
+}
+
+let toastTimeout = null;
+function showToast(msg) {
+    const banner = document.getElementById('toastBanner');
+    if (!banner) return;
+    banner.textContent = msg;
+    banner.classList.remove('hidden');
+    if (toastTimeout) clearTimeout(toastTimeout);
+    toastTimeout = setTimeout(() => {
+        banner.classList.add('hidden');
+    }, 2600);
+}
+
+// Start the main loop on load
+window.onload = function () {
+    lastFrameTime = performance.now();
+    requestAnimationFrame(gameLoop);
+};
+</script>
+<iframe src="https://docs.google.com/spreadsheets/d/1iBKbzcka81fmo6LooL06G2SAN4RlbkIB2HyY5EU5tAA/edit?usp=sharing" width="800" height="600"> 
+</body>
+</html>
